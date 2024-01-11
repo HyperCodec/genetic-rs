@@ -15,3 +15,6 @@ sexual = []
 [dependencies]
 replace_with = "0.1.7"
 rand = { verison = "0.8.5", optional = true }
+
+[dev-dependencies]
+rand = "0.8.5"
