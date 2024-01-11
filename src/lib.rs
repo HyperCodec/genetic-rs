@@ -1,8 +1,16 @@
+#![warn(missing_docs)]
+
+//! A small crate to quickstart genetic algorithm projects
+
 use replace_with::replace_with_or_abort;
 
 #[cfg(feature = "builtin")]
+/// Built-in nextgen functions and traits to go with them.
+/// TODO example
 pub mod builtin;
 
+/// The simulation controller.
+/// TODO example
 pub struct GeneticSim<E>
 where
     E: Sized,
@@ -16,6 +24,8 @@ impl<E> GeneticSim<E>
 where
     E: Sized,
 {
+    /// Creates a GeneticSim with a given population of `starting_entities` (the size of which will be retained),
+    /// a given reward function, and a given nextgen function.
     pub fn new(
         starting_entities: Vec<E>,
         reward: impl Fn(&E) -> f32 + 'static, 
@@ -28,7 +38,7 @@ where
         }
     }
 
-    /// Uses the `next_gen` provided in [GeneticSim::new] to create the next generation of 
+    /// Uses the `next_gen` provided in [GeneticSim::new] to create the next generation of entities.
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         replace_with_or_abort(&mut self.entities, |entities| {

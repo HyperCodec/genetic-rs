@@ -1,3 +1,4 @@
+/// Used in asexually reproducing [next_gen]s
 pub trait ASexualEntity {
     /// Mutate the entity with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32);
@@ -7,14 +8,20 @@ pub trait ASexualEntity {
     fn spawn_child(&self) -> Self;
 }
 
-// TODO sexual
+/// Used sexually reproducing [next_gen]s
+pub trait SexualEntity {
+    /// 
+    fn spawn_child(&self, other: &Self) -> Self;
+}
 
+/// Used in pruning [next_gen]s
 pub trait Prunable {
     /// This does any unfinished work in the despawning process.
     /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn an entity.
     fn despawn(&mut self) {}
 }
 
+/// Contains functions used in [GeneticSim][crate::GeneticSim].
 pub mod next_gen {
     use super::*;
 
