@@ -8,8 +8,10 @@ license = "MIT"
 [features]
 default = ["builtin"]
 builtin = []
+sexual = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 replace_with = "0.1.7"
+rand = { verison = "0.8.5", optional = true }

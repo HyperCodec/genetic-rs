@@ -4,9 +4,9 @@
 
 use replace_with::replace_with_or_abort;
 
-#[cfg(feature = "builtin")]
 /// Built-in nextgen functions and traits to go with them.
 /// TODO example
+#[cfg(feature = "builtin")]
 pub mod builtin;
 
 /// Used to quickly import everything this crate has to offer.
