@@ -9,6 +9,10 @@ use replace_with::replace_with_or_abort;
 /// TODO example
 pub mod builtin;
 
+/// Used to quickly import everything this crate has to offer.
+/// Simply add `use genetic_rs::prelude::*` to begin using this crate.
+pub mod prelude;
+
 /// The simulation controller.
 /// TODO example
 pub struct GeneticSim<E>
@@ -57,7 +61,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::prelude::*;
 
     #[test]
     fn test_api() {
