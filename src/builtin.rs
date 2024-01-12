@@ -32,7 +32,7 @@ pub mod next_gen {
     #[cfg(feature = "sexual")] use rand::prelude::*;
 
     /// When making a new generation, it mutates each entity a certain amount depending on their reward.
-    /// This nextgen is very situational and should not be your first choice of them.
+    /// This nextgen is very situational and should not be your first choice.
     pub fn asexual_scrambling_nextgen<E: ASexualEntity>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
