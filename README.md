@@ -2,7 +2,7 @@
 A crate for quickstarting genetic algorithm projects
 
 ### How to Use
-First off, this crate comes with the `builtin` module by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
+First off, this crate comes with the `builtin` and `genrand` modules by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
 
 Once you have eveything imported as you wish, you can define your entity and impl the required traits:
 
@@ -33,6 +33,12 @@ impl Prunable for MyEntity {
         println!("{:?} died", self);
     }
 }
+
+impl GenerateRandom for MyEntity {
+    fn gen_random(rng: &mut impl rand::Rng) -> Self {
+        Self { field1: rng.gen() }
+    }
+}
 ```
 
 Once you have a struct, you must create your fitness function:
@@ -47,14 +53,9 @@ Once you have your reward function, you can create a `GeneticSim` object to mana
 
 ```rust
 fn main() {
-    // need to define a starting population of random entities. the simulation should always retain the same population size.
-    let population = (0..100) // population size is 100
-        .into_iter()
-        .map(|_| MyEntity { field1: fastrand::f32() })
-        .collect();
-
+    let mut rng = rand::thread_rng();
     let mut sim = GeneticSim::new(
-        population,
+        Vec::gen_random(&mut rng, 1000), // must provide a random starting population. size will be preserved in builtin nextgen fns. note that you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         my_fitness_fn,
         asexual_pruning_nextgen,
     );
