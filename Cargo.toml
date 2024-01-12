@@ -7,9 +7,10 @@ license = "MIT"
 readme = "README.md"
 
 [features]
-default = ["builtin"]
+default = ["builtin", "genrand"]
 builtin = []
-sexual = []
+sexual = ["dep:rand"]
+genrand = ["dep:rand"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

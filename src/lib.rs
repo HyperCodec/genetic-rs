@@ -5,7 +5,6 @@
 use replace_with::replace_with_or_abort;
 
 /// Built-in nextgen functions and traits to go with them.
-/// TODO example
 #[cfg(feature = "builtin")]
 pub mod builtin;
 
@@ -40,23 +39,29 @@ pub mod prelude;
 /// 
 /// impl Prunable for MyEntity {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
 /// 
+/// impl GenerateRandom for MyEntity {
+///     fn gen_random(rng: &mut impl Rng) -> Self {
+///         Self {
+///             a: rng.gen(),
+///             b: rng.gen(),
+///         }
+///     }
+/// }
+/// 
 /// fn main() {
-///     let population: Vec<_> = (0..100)
-///         .into_iter()
-///         .map(|_| MyEntity { a: fastrand::f32(), b: fastrand::f32() })
-///         .collect();
-///     
 ///     let my_fitness_fn = |e: &MyEntity| {
 ///         e.a * e.b // should result in entities increasing their value
 ///     };
 /// 
+///     let mut rng = rand::thread_rng();
+/// 
 ///     let mut sim = GeneticSim::new(
-///         population,
+///         Vec::gen_random(&mut rng, 1000),
 ///         my_fitness_fn,
 ///         asexual_pruning_nextgen,
 ///     );
 /// 
-///     for _ in 0..1000 {
+///     for _ in 0..100 {
 ///         // if this were a more complex simulation, you might test entities in `sim.entities` between `next_generation` calls to provide a more accurate reward.
 ///         sim.next_generation();
 ///     }
@@ -109,9 +114,40 @@ where
     }
 }
 
+#[cfg(feature = "genrand")] use rand::prelude::*;
+
+/// Helper trait used in the generation of random starting populations
+#[cfg(feature = "genrand")]
+pub trait GenerateRandom {
+    /// Create a completely random instance of the entity
+    fn gen_random(rng: &mut impl Rng) -> Self;
+}
+
+/// Blanket trait used on collections that contain objects implementing GenerateRandom
+#[cfg(feature = "genrand")]
+pub trait GenerateRandomCollection<T>
+where
+    T: GenerateRandom,
+{
+    /// Generate a random collection of the inner objects with a given amount
+    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
+}
+
+impl<C, T> GenerateRandomCollection<T> for C
+where
+    C: FromIterator<T>,
+    T: GenerateRandom,
+{
+    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
+        (0..amount)
+            .into_iter()
+            .map(|_| T::gen_random(rng))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-
     use super::prelude::*;
 
     #[derive(Default, Clone, Debug)]
@@ -137,6 +173,12 @@ mod tests {
         }
     }
 
+    impl GenerateRandom for MyEntity {
+        fn gen_random(rng: &mut impl Rng) -> Self {
+            Self(rng.gen())
+        }
+    }
+
     const MAGIC_NUMBER: f32 = std::f32::consts::E;
 
     fn my_fitness_fn(ent: &MyEntity) -> f32 {
@@ -145,12 +187,9 @@ mod tests {
 
     #[test]
     fn scramble() {
-        let pop = (0..1000)
-            .map(|_| MyEntity(fastrand::f32()))
-            .collect();
-
+        let mut rng = rand::thread_rng();
         let mut sim = GeneticSim::new(
-            pop, 
+            Vec::gen_random(&mut rng, 1000), 
             my_fitness_fn, 
             scrambling_nextgen,
         );
@@ -164,12 +203,9 @@ mod tests {
 
     #[test]
     fn a_prune() {
-        let pop = (0..1000)
-            .map(|_| MyEntity(fastrand::f32()))
-            .collect();
-
+        let mut rng = rand::thread_rng();
         let mut sim = GeneticSim::new(
-            pop,
+            Vec::gen_random(&mut rng, 1000),
             my_fitness_fn,
             asexual_pruning_nextgen,
         );
