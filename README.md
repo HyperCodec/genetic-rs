@@ -2,7 +2,7 @@
 A crate for quickstarting genetic algorithm projects
 
 ### How to Use
-First off, this crate comes with the `builtin` and `genrand` modules by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
+First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
 
 Once you have eveything imported as you wish, you can define your entity and impl the required traits:
 
