@@ -1,5 +1,5 @@
 # genetic-rs
-A crate for quickstarting genetic algorithm projects
+A small crate for quickstarting genetic algorithm projects
 
 ### How to Use
 First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
