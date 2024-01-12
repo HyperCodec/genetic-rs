@@ -14,7 +14,56 @@ pub mod builtin;
 pub mod prelude;
 
 /// The simulation controller.
-/// TODO example
+/// ```rust
+/// use genetic_rs::prelude::*;
+/// 
+/// #[derive(Debug, Clone)]
+/// struct MyEntity {
+///     a: f32,
+///     b: f32,
+/// }
+/// 
+/// impl RandomlyMutable for MyEntity {
+///     fn mutate(&mut self, rate: f32) {
+///         self.a += fastrand::f32() * rate;
+///         self.b += fastrand::f32() * rate;
+///     }
+/// }
+/// 
+/// impl ASexualEntity for MyEntity {
+///     fn spawn_child(&self) -> Self {
+///         let mut child = self.clone();
+///         child.mutate(0.25); // you'll generally want to use a constant mutation rate for mutating children.
+///         child
+///     }
+/// }
+/// 
+/// impl Prunable for MyEntity {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
+/// 
+/// fn main() {
+///     let population: Vec<_> = (0..100)
+///         .into_iter()
+///         .map(|_| MyEntity { a: fastrand::f32(), b: fastrand::f32() })
+///         .collect();
+///     
+///     let my_reward_fn = |e: &MyEntity| {
+///         e.a * e.b // should result in entities increasing their value
+///     };
+/// 
+///     let mut sim = GeneticSim::new(
+///         population,
+///         my_reward_fn,
+///         asexual_pruning_nextgen,
+///     );
+/// 
+///     for _ in 0..1000 {
+///         // if this were a more complex simulation, you might test entities in `sim.entities` between `next_generation` calls to provide a more accurate reward.
+///         sim.next_generation();
+///     }
+/// 
+///     dbg!(sim.entities);
+/// }
+/// ```
 pub struct GeneticSim<E>
 where
     E: Sized,
@@ -64,17 +113,17 @@ where
 mod tests {
 
     use super::prelude::*;
-    use rand::prelude::*;
 
     #[derive(Default, Clone, Debug)]
     struct MyEntity(f32);
 
-    impl ASexualEntity for MyEntity {
+    impl RandomlyMutable for MyEntity {
         fn mutate(&mut self, rate: f32) {
-            let mut rng = rand::thread_rng();
-            self.0 += rng.gen::<f32>() * rate;
+            self.0 += fastrand::f32() * rate;
         }
+    }
 
+    impl ASexualEntity for MyEntity {
         fn spawn_child(&self) -> Self {
             let mut child = self.clone();
             child.mutate(0.25);
@@ -96,10 +145,8 @@ mod tests {
 
     #[test]
     fn a_scramble() {
-        let mut rng = rand::thread_rng();
-
         let pop = (0..1000)
-            .map(|_| MyEntity(rng.gen::<f32>()))
+            .map(|_| MyEntity(fastrand::f32()))
             .collect();
 
         let mut sim = GeneticSim::new(
@@ -117,10 +164,8 @@ mod tests {
 
     #[test]
     fn a_prune() {
-        let mut rng = rand::thread_rng();
-
         let pop = (0..1000)
-            .map(|_| MyEntity(rng.gen::<f32>()))
+            .map(|_| MyEntity(fastrand::f32()))
             .collect();
 
         let mut sim = GeneticSim::new(

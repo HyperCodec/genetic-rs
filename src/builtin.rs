@@ -1,16 +1,19 @@
-/// Used in asexually reproducing [next_gen]s
-pub trait ASexualEntity {
+/// Used in all of the builtin [next_gen]s to randomly mutate entities a given amount
+pub trait RandomlyMutable {
     /// Mutate the entity with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32);
+}
 
-    /// Create a new child with mutation. Similar to [mutate][ASexualEntity::mutate], but returns a new instance instead of modifying the original.
-    /// If it is simply returning a cloned and mutated version, consider using a constant default mutation rate.
+/// Used in asexually reproducing [next_gen]s
+pub trait ASexualEntity: RandomlyMutable {
+    /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
+    /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn spawn_child(&self) -> Self;
 }
 
 /// Used in sexually reproducing [next_gen]s
 #[cfg(feature = "sexual")]
-pub trait SexualEntity {
+pub trait SexualEntity: RandomlyMutable {
     /// Use sexual reproduction to create a new entity.
     fn spawn_child(&self, other: &Self) -> Self;
 }
@@ -29,6 +32,7 @@ pub mod next_gen {
     #[cfg(feature = "sexual")] use rand::prelude::*;
 
     /// When making a new generation, it mutates each entity a certain amount depending on their reward.
+    /// This nextgen is very situational and should not be your first choice of them.
     pub fn asexual_scrambling_nextgen<E: ASexualEntity>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
