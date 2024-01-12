@@ -132,7 +132,7 @@ mod tests {
     }
 
     impl Prunable for MyEntity {
-        fn despawn(&mut self) {
+        fn despawn(self) {
             println!("RIP {:?}", self);
         }
     }

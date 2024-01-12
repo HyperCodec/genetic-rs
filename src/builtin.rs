@@ -19,10 +19,10 @@ pub trait SexualEntity: RandomlyMutable {
 }
 
 /// Used in pruning [next_gen]s
-pub trait Prunable {
+pub trait Prunable: Sized {
     /// This does any unfinished work in the despawning process.
     /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn an entity.
-    fn despawn(&mut self) {}
+    fn despawn(self) {}
 }
 
 /// Contains functions used in [GeneticSim][crate::GeneticSim].
@@ -106,7 +106,7 @@ pub mod next_gen {
 
         rewards
             .into_iter()
-            .filter_map(|(mut e, r)| {
+            .filter_map(|(e, r)| {
                 if r < median {
                     e.despawn();
                     return None;

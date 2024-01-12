@@ -29,7 +29,7 @@ impl ASexualEntity for MyEntity {
 }
 
 impl Prunable for MyEntity {
-    fn despawn(&mut self) { // TODO make despawn consuming
+    fn despawn(self) {
         println!("{:?} died", self);
     }
 }
