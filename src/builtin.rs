@@ -47,8 +47,8 @@ pub mod next_gen {
     /// When making a new generation, it despawns half of the entities and then spawns children from the remaining to reproduce.
     /// WIP: const generic for mutation rate, will allow for [ASexualEntity::spawn_child] to accept a custom mutation rate. Delayed due to current Rust limitations
     pub fn asexual_pruning_nextgen<E: ASexualEntity + Prunable + Clone>(rewards: Vec<(E, f32)>) -> Vec<E> {
+        let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
-        let population_size = next_gen.len();
 
         let mut og_champions = next_gen
             .clone() // TODO remove if possible. currently doing so because `next_gen` is borrowed as mutable later
@@ -64,18 +64,12 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Slightly slower than [asexual_pruning_nextgen] due to a sort, it simply makes better-rewarded entities more likely to have children.
-    pub fn skewered_asexual_pruning_nextgen<E: ASexualEntity + Prunable + Clone>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
-        rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
-        asexual_pruning_nextgen(rewards)
-    }
-
     /// Prunes half of the entities and randomly breeds the remaining ones.
     /// S: allow selfbreeding - false by default.
     #[cfg(feature = "sexual")]
     pub fn sexual_pruning_nextgen<E: SexualEntity + Prunable + Clone, const S: bool = false>(rewards: Vec<(E, f32)>) -> Vec<E> {
+        let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
-        let population_size = next_gen.len();
 
         // TODO better/more customizable rng
         let mut rng = rand::thread_rng();
@@ -101,17 +95,15 @@ pub mod next_gen {
         next_gen
     }
 
-    fn pruning_helper<E: Prunable + Clone>(rewards: Vec<(E, f32)>) -> Vec<E> {
-        let sum: f32 = rewards
-            .iter()
-            .map(|(_, r)| r)
-            .sum();
-        let avg = sum / rewards.len() as f32;
+    fn pruning_helper<E: Prunable + Clone>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
+        rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
+
+        let median = rewards[rewards.len() / 2].1;
 
         rewards
             .into_iter()
             .filter_map(|(mut e, r)| {
-                if r < avg {
+                if r < median {
                     e.despawn();
                     return None;
                 }

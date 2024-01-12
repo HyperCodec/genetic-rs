@@ -95,9 +95,15 @@ mod tests {
     }
 
     #[test]
-    fn as_scramble() {
+    fn a_scramble() {
+        let mut rng = rand::thread_rng();
+
+        let pop = (0..1000)
+            .map(|_| MyEntity(rng.gen::<f32>()))
+            .collect();
+
         let mut sim = GeneticSim::new(
-            vec![MyEntity::default(); 100], 
+            pop, 
             my_reward_fn, 
             asexual_scrambling_nextgen,
         );
@@ -110,9 +116,15 @@ mod tests {
     }
 
     #[test]
-    fn as_prune() {
+    fn a_prune() {
+        let mut rng = rand::thread_rng();
+
+        let pop = (0..1000)
+            .map(|_| MyEntity(rng.gen::<f32>()))
+            .collect();
+
         let mut sim = GeneticSim::new(
-            vec![MyEntity::default(); 100],
+            pop,
             my_reward_fn,
             asexual_pruning_nextgen,
         );
