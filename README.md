@@ -35,10 +35,10 @@ impl Prunable for MyEntity {
 }
 ```
 
-Once you have a struct, you must create your reward function:
+Once you have a struct, you must create your fitness function:
 ```rust
-fn my_reward_fn(ent: &MyEntity) -> f32 {
-    ent.field1 // this just means that the algorithm will try to create as big a number as possible due to reward being directly taken from the field.
+fn my_fitness_fn(ent: &MyEntity) -> f32 {
+    ent.field1 // this just means that the algorithm will try to create as big a number as possible due to fitness being directly taken from the field.
 }
 ```
 
@@ -55,8 +55,8 @@ fn main() {
 
     let mut sim = GeneticSim::new(
         population,
-        my_reward_fn,
-
+        my_fitness_fn,
+        asexual_pruning_nextgen,
     );
 
     // perform evolution (100 gens)

@@ -46,13 +46,13 @@ pub mod prelude;
 ///         .map(|_| MyEntity { a: fastrand::f32(), b: fastrand::f32() })
 ///         .collect();
 ///     
-///     let my_reward_fn = |e: &MyEntity| {
+///     let my_fitness_fn = |e: &MyEntity| {
 ///         e.a * e.b // should result in entities increasing their value
 ///     };
 /// 
 ///     let mut sim = GeneticSim::new(
 ///         population,
-///         my_reward_fn,
+///         my_fitness_fn,
 ///         asexual_pruning_nextgen,
 ///     );
 /// 
@@ -70,7 +70,7 @@ where
 {
     /// The current population of entities
     pub entities: Vec<E>,
-    reward: Box<dyn Fn(&E) -> f32>,
+    fitness: Box<dyn Fn(&E) -> f32>,
     next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E>>,
 }
 
@@ -79,15 +79,15 @@ where
     E: Sized,
 {
     /// Creates a GeneticSim with a given population of `starting_entities` (the size of which will be retained),
-    /// a given reward function, and a given nextgen function.
+    /// a given fitness function, and a given nextgen function.
     pub fn new(
         starting_entities: Vec<E>,
-        reward: impl Fn(&E) -> f32 + 'static, 
+        fitness: impl Fn(&E) -> f32 + 'static, 
         next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + 'static
     ) -> Self {
         Self {
             entities: starting_entities,
-            reward: Box::new(reward),
+            fitness: Box::new(fitness),
             next_gen: Box::new(next_gen),
         }
     }
@@ -99,8 +99,8 @@ where
             let rewards = entities
                 .into_iter()
                 .map(|e| {
-                    let reward = (self.reward)(&e);
-                    (e, reward)
+                    let fitness: f32 = (self.fitness)(&e);
+                    (e, fitness)
                 })
                 .collect();
 
@@ -139,7 +139,7 @@ mod tests {
 
     const MAGIC_NUMBER: f32 = std::f32::consts::E;
 
-    fn my_reward_fn(ent: &MyEntity) -> f32 {
+    fn my_fitness_fn(ent: &MyEntity) -> f32 {
         (MAGIC_NUMBER - ent.0).abs() * -1.
     }
 
@@ -151,7 +151,7 @@ mod tests {
 
         let mut sim = GeneticSim::new(
             pop, 
-            my_reward_fn, 
+            my_fitness_fn, 
             scrambling_nextgen,
         );
 
@@ -170,7 +170,7 @@ mod tests {
 
         let mut sim = GeneticSim::new(
             pop,
-            my_reward_fn,
+            my_fitness_fn,
             asexual_pruning_nextgen,
         );
 
