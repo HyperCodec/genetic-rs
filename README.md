@@ -19,7 +19,7 @@ impl RandomlyMutable for MyEntity {
     }
 }
 
-// required for `asexual_scrambling_nextgen` and `asexual_pruning_nextgen`. TODO change source
+// required for `asexual_pruning_nextgen`.
 impl ASexualEntity for MyEntity {
     fn spawn_child(&self) -> Self {
         let mut child = self.clone();

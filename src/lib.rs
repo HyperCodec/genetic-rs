@@ -144,7 +144,7 @@ mod tests {
     }
 
     #[test]
-    fn a_scramble() {
+    fn scramble() {
         let pop = (0..1000)
             .map(|_| MyEntity(fastrand::f32()))
             .collect();
@@ -152,7 +152,7 @@ mod tests {
         let mut sim = GeneticSim::new(
             pop, 
             my_reward_fn, 
-            asexual_scrambling_nextgen,
+            scrambling_nextgen,
         );
 
         for _ in 0..100 {
