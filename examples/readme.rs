@@ -1,12 +1,8 @@
-# genetic-rs
-A small crate for quickstarting genetic algorithm projects
+//! The example from the README.md and crate root
 
-### How to Use
-First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
+use genetic_rs::prelude::*;
 
-Once you have eveything imported as you wish, you can define your entity and impl the required traits:
 
-```rust
 #[derive(Clone, Debug)] // clone is currently a required derive for pruning nextgens.
 struct MyEntity {
     field1: f32,
@@ -42,21 +38,13 @@ impl GenerateRandom for MyEntity {
         Self { field1: rng.gen() }
     }
 }
-```
 
-Once you have a struct, you must create your fitness function:
-```rust
 fn my_fitness_fn(ent: &MyEntity) -> f32 {
     // this just means that the algorithm will try to create as big a number as possible due to fitness being directly taken from the field.
     // in a more complex genetic algorithm, you will want to utilize `ent` to test them and generate a reward.
     ent.field1
 }
-```
 
-
-Once you have your reward function, you can create a `GeneticSim` object to manage and control the evolutionary steps:
-
-```rust
 fn main() {
     let mut rng = rand::thread_rng();
     let mut sim = GeneticSim::new(
@@ -75,9 +63,3 @@ fn main() {
  
     dbg!(sim.entities);
 }
-```
-
-That is the minimal code for a working pruning-based genetic algorithm. You can [read the docs](https://docs.rs/genetic-rs) or [check the examples](/examples/) for more complicated systems.
-
-### License
-This project falls under the `MIT` license.
