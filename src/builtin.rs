@@ -30,9 +30,11 @@ pub mod next_gen {
     use super::*;
 
     #[cfg(feature = "sexual")] use rand::prelude::*;
+    #[cfg(feature = "rayon")] use rayon::prelude::*;
 
     /// When making a new generation, it mutates each entity a certain amount depending on their reward.
     /// This nextgen is very situational and should not be your first choice.
+    #[cfg(not(feature = "rayon"))]
     pub fn scrambling_nextgen<E: RandomlyMutable>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
@@ -40,6 +42,22 @@ pub mod next_gen {
 
         rewards
             .into_iter()
+            .enumerate()
+            .map(|(i, (mut e, _))| {
+                e.mutate(i as f32 / len);
+                e
+            })
+            .collect()
+    }
+
+    #[cfg(feature = "rayon")]
+    pub fn scrambling_nextgen<E: RandomlyMutable>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
+        rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
+
+        let len = rewards.len() as f32;
+
+        rewards
+            .into_par_iter()
             .enumerate()
             .map(|(i, (mut e, _))| {
                 e.mutate(i as f32 / len);
@@ -99,6 +117,7 @@ pub mod next_gen {
         next_gen
     }
 
+    #[cfg(not(feature = "rayon"))]
     fn pruning_helper<E: Prunable + Clone>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
@@ -106,6 +125,25 @@ pub mod next_gen {
 
         rewards
             .into_iter()
+            .filter_map(|(e, r)| {
+                if r < median {
+                    e.despawn();
+                    return None;
+                }
+
+                Some(e)
+            })
+            .collect()
+    }
+
+    #[cfg(feature = "rayon")]
+    fn pruning_helper<E: Prunable + Clone>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
+        rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
+
+        let median = rewards[rewards.len() / 2].1;
+
+        rewards
+            .into_par_iter()
             .filter_map(|(e, r)| {
                 if r < median {
                     e.despawn();

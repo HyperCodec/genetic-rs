@@ -86,12 +86,13 @@
 use replace_with::replace_with_or_abort;
 
 /// Built-in nextgen functions and traits to go with them.
-#[cfg(feature = "builtin")]
-pub mod builtin;
+#[cfg(feature = "builtin")] pub mod builtin;
 
 /// Used to quickly import everything this crate has to offer.
 /// Simply add `use genetic_rs::prelude::*` to begin using this crate.
 pub mod prelude;
+
+#[cfg(feature = "rayon")] use rayon::prelude::*;
 
 /// The simulation controller.
 /// ```rust
@@ -179,11 +180,27 @@ where
     }
 
     /// Uses the `next_gen` provided in [GeneticSim::new] to create the next generation of entities.
+    #[cfg(not(feature = "rayon"))]
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         replace_with_or_abort(&mut self.entities, |entities| {
             let rewards = entities
                 .into_iter()
+                .map(|e| {
+                    let fitness: f32 = (self.fitness)(&e);
+                    (e, fitness)
+                })
+                .collect();
+
+            (self.next_gen)(rewards)
+        });
+    }
+
+    #[cfg(feature = "rayon")]
+    pub fn next_generation(&mut self) {
+        replace_with_or_abort(&mut self.entities, |entities| {
+            let rewards = entities
+                .into_par_iter()
                 .map(|e| {
                     let fitness: f32 = (self.fitness)(&e);
                     (e, fitness)
@@ -214,6 +231,7 @@ where
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
 }
 
+#[cfg(not(feature = "rayon"))]
 impl<C, T> GenerateRandomCollection<T> for C
 where
     C: FromIterator<T>,
@@ -222,6 +240,20 @@ where
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
         (0..amount)
             .into_iter()
+            .map(|_| T::gen_random(rng))
+            .collect()
+    }
+}
+
+#[cfg(feature = "rayon")]
+impl<C, T> GenerateRandomCollection<T> for C
+where
+    C: FromIterator<T>,
+    T: GenerateRandom,
+{
+    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
+        (0..amount)
+            .into_par_iter()
             .map(|_| T::gen_random(rng))
             .collect()
     }

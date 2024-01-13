@@ -11,12 +11,14 @@ default = ["builtin", "genrand"]
 builtin = []
 sexual = ["dep:rand"]
 genrand = ["dep:rand"]
+rayon = ["dep:rayon"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 replace_with = "0.1.7"
 rand = { version = "0.8.5", optional = true }
+rayon = { version = "1.8.0", optional = true }
 
 [dev-dependencies]
 fastrand = "2.0.1"
