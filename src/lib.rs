@@ -13,7 +13,7 @@
 //!     field1: f32,
 //! }
 //! 
-//! // required in all of the builtin functions as requirements of `ASexualEntity` and `SexualEntity`
+//! // required in all of the builtin functions as requirements of `DivisionReproduction` and `SexualEntity`
 //! impl RandomlyMutable for MyEntity {
 //!     fn mutate(&mut self, rate: f32) {
 //!         self.field1 += fastrand::f32() * rate;
@@ -21,7 +21,7 @@
 //! }
 //! 
 //! // required for `asexual_pruning_nextgen`.
-//! impl ASexualEntity for MyEntity {
+//! impl DivisionReproduction for MyEntity {
 //!     fn spawn_child(&self) -> Self {
 //!         let mut child = self.clone();
 //!         child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
@@ -66,8 +66,7 @@
 //!         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
 //!         Vec::gen_random(&mut rng, 100),
 //!         my_fitness_fn,
-//!         asexual_pruning_nextgen,
-//!     );
+//!         division
 //!     
 //!     // perform evolution (100 gens)
 //!     for _ in 0..100 {
@@ -111,7 +110,7 @@ pub mod prelude;
 ///     }
 /// }
 /// 
-/// impl ASexualEntity for MyEntity {
+/// impl DivisionReproduction for MyEntity {
 ///     fn spawn_child(&self) -> Self {
 ///         let mut child = self.clone();
 ///         child.mutate(0.25); // you'll generally want to use a constant mutation rate for mutating children.
@@ -140,7 +139,7 @@ pub mod prelude;
 ///     let mut sim = GeneticSim::new(
 ///         Vec::gen_random(&mut rng, 1000),
 ///         my_fitness_fn,
-///         asexual_pruning_nextgen,
+///         division_pruning_nextgen,
 ///     );
 /// 
 ///     for _ in 0..100 {
@@ -272,7 +271,7 @@ mod tests {
         }
     }
 
-    impl ASexualEntity for MyEntity {
+    impl DivisionReproduction for MyEntity {
         fn spawn_child(&self) -> Self {
             let mut child = self.clone();
             child.mutate(0.25);
@@ -320,7 +319,7 @@ mod tests {
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 1000),
             my_fitness_fn,
-            asexual_pruning_nextgen,
+            division_pruning_nextgen,
         );
 
         for _ in 0..100 {

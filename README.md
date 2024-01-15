@@ -2,7 +2,7 @@
 A small crate for quickstarting genetic algorithm projects
 
 ### How to Use
-First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature. If you want it to be parallelized, you can add the `rayon` feature.
+First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature. If you want it to be parallelized, you can add the `rayon` feature.
 
 Once you have eveything imported as you wish, you can define your entity and impl the required traits:
 
@@ -12,7 +12,7 @@ struct MyEntity {
     field1: f32,
 }
 
-// required in all of the builtin functions as requirements of `ASexualEntity` and `SexualEntity`
+// required in all of the builtin functions as requirements of `DivsionReproduction` and `CrossoverReproduction`
 impl RandomlyMutable for MyEntity {
     fn mutate(&mut self, rate: f32) {
         self.field1 += fastrand::f32() * rate;
@@ -20,7 +20,7 @@ impl RandomlyMutable for MyEntity {
 }
 
 // required for `asexual_pruning_nextgen`.
-impl ASexualEntity for MyEntity {
+impl DivsionReproduction for MyEntity {
     fn spawn_child(&self) -> Self {
         let mut child = self.clone();
         child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
@@ -65,7 +65,7 @@ fn main() {
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
         my_fitness_fn,
-        asexual_pruning_nextgen,
+        division_pruning_nextgen,
     );
  
     // perform evolution (100 gens)

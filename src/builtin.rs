@@ -4,17 +4,17 @@ pub trait RandomlyMutable {
     fn mutate(&mut self, rate: f32);
 }
 
-/// Used in asexually reproducing [next_gen]s
-pub trait ASexualEntity: RandomlyMutable {
+/// Used in dividually-reproducing [next_gen]s
+pub trait DivisionReproduction: RandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn spawn_child(&self) -> Self;
 }
 
-/// Used in sexually reproducing [next_gen]s
-#[cfg(feature = "sexual")]
-pub trait SexualEntity: RandomlyMutable {
-    /// Use sexual reproduction to create a new entity.
+/// Used in crossover-reproducing [next_gen]s
+#[cfg(feature = "crossover")]
+pub trait CrossoverReproduction: RandomlyMutable {
+    /// Use crossover reproduction to create a new entity.
     fn spawn_child(&self, other: &Self) -> Self;
 }
 
@@ -29,7 +29,7 @@ pub trait Prunable: Sized {
 pub mod next_gen {
     use super::*;
 
-    #[cfg(feature = "sexual")] use rand::prelude::*;
+    #[cfg(feature = "crossover")] use rand::prelude::*;
     #[cfg(feature = "rayon")] use rayon::prelude::*;
 
     /// When making a new generation, it mutates each entity a certain amount depending on their reward.
@@ -67,8 +67,8 @@ pub mod next_gen {
     }
 
     /// When making a new generation, it despawns half of the entities and then spawns children from the remaining to reproduce.
-    /// WIP: const generic for mutation rate, will allow for [ASexualEntity::spawn_child] to accept a custom mutation rate. Delayed due to current Rust limitations
-    pub fn asexual_pruning_nextgen<E: ASexualEntity + Prunable + Clone>(rewards: Vec<(E, f32)>) -> Vec<E> {
+    /// WIP: const generic for mutation rate, will allow for [DivisionReproduction::spawn_child] to accept a custom mutation rate. Delayed due to current Rust limitations
+    pub fn division_pruning_nextgen<E: DivisionReproduction + Prunable + Clone>(rewards: Vec<(E, f32)>) -> Vec<E> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
@@ -88,8 +88,8 @@ pub mod next_gen {
 
     /// Prunes half of the entities and randomly breeds the remaining ones.
     /// S: allow selfbreeding - false by default.
-    #[cfg(feature = "sexual")]
-    pub fn sexual_pruning_nextgen<E: SexualEntity + Prunable + Clone, const S: bool = false>(rewards: Vec<(E, f32)>) -> Vec<E> {
+    #[cfg(feature = "crossover")]
+    pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone, const S: bool = false>(rewards: Vec<(E, f32)>) -> Vec<E> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 

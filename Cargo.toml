@@ -14,7 +14,7 @@ categories = ["algorithms", "science", "simulation"]
 [features]
 default = ["builtin", "genrand"]
 builtin = []
-sexual = ["dep:rand"]
+crossover = ["dep:rand"]
 genrand = ["dep:rand"]
 rayon = ["dep:rayon"]
 

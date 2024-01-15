@@ -8,15 +8,15 @@ struct MyEntity {
     field1: f32,
 }
 
-// required in all of the builtin functions as requirements of `ASexualEntity` and `SexualEntity`
+// required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`.
 impl RandomlyMutable for MyEntity {
     fn mutate(&mut self, rate: f32) {
         self.field1 += fastrand::f32() * rate;
     }
 }
 
-// required for `asexual_pruning_nextgen`.
-impl ASexualEntity for MyEntity {
+// required for `division_pruning_nextgen`.
+impl DivisionReproduction for MyEntity {
     fn spawn_child(&self) -> Self {
         let mut child = self.clone();
         child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
@@ -53,7 +53,7 @@ fn main() {
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
         my_fitness_fn,
-        asexual_pruning_nextgen,
+        division_pruning_nextgen,
     );
  
     // perform evolution (100 gens)
