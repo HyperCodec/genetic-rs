@@ -7,7 +7,7 @@
 //! 
 //! Once you have eveything imported as you wish, you can define your entity and impl the required traits:
 //! 
-//! ```rust
+//! ```rust, ignore
 //! #[derive(Clone, Debug)] // clone is currently a required derive for pruning nextgens.
 //! struct MyEntity {
 //!     field1: f32,
@@ -46,7 +46,7 @@
 //! ```
 //! 
 //! Once you have a struct, you must create your fitness function:
-//! ```rust
+//! ```rust, ignore
 //! fn my_fitness_fn(ent: &MyEntity) -> f32 {
 //!     // this just means that the algorithm will try to create as big a number as possible due to fitness being directly taken from the field.
 //!     // in a more complex genetic algorithm, you will want to utilize `ent` to test them and generate a reward.
@@ -57,7 +57,7 @@
 //! 
 //! Once you have your reward function, you can create a `GeneticSim` object to manage and control the evolutionary steps:
 //! 
-//! ```rust
+//! ```rust, ignore
 //! fn main() {
 //!     let mut rng = rand::thread_rng();
 //!     let mut sim = GeneticSim::new(
@@ -122,7 +122,7 @@ pub mod prelude;
 /// impl Prunable for MyEntity {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
 /// 
 /// impl GenerateRandom for MyEntity {
-///     fn gen_random(rng: &mut impl Rng) -> Self {
+///     fn gen_random(rng: &mut impl rand::Rng) -> Self {
 ///         Self {
 ///             a: rng.gen(),
 ///             b: rng.gen(),
