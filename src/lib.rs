@@ -67,6 +67,7 @@
 //!         Vec::gen_random(&mut rng, 100),
 //!         my_fitness_fn,
 //!         division
+//!     );
 //!     
 //!     // perform evolution (100 gens)
 //!     for _ in 0..100 {
