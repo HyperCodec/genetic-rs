@@ -3,7 +3,7 @@
 //! A small crate to quickstart genetic algorithm projects
 //! 
 //! ### How to Use
-//! First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin sexual reproduction extension, you can do so by adding the `sexual` feature.
+//! First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature.
 //! 
 //! Once you have eveything imported as you wish, you can define your entity and impl the required traits:
 //! 
@@ -13,14 +13,14 @@
 //!     field1: f32,
 //! }
 //! 
-//! // required in all of the builtin functions as requirements of `DivisionReproduction` and `SexualEntity`
+//! // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`
 //! impl RandomlyMutable for MyEntity {
 //!     fn mutate(&mut self, rate: f32) {
 //!         self.field1 += fastrand::f32() * rate;
 //!     }
 //! }
 //! 
-//! // required for `asexual_pruning_nextgen`.
+//! // required for `division_pruning_nextgen`.
 //! impl DivisionReproduction for MyEntity {
 //!     fn spawn_child(&self) -> Self {
 //!         let mut child = self.clone();
@@ -55,7 +55,7 @@
 //! ```
 //! 
 //! 
-//! Once you have your reward function, you can create a `GeneticSim` object to manage and control the evolutionary steps:
+//! Once you have your fitness function, you can create a `GeneticSim` object to manage and control the evolutionary steps:
 //! 
 //! ```rust, ignore
 //! fn main() {
