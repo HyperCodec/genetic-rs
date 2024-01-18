@@ -267,15 +267,15 @@ mod tests {
     struct MyEntity(f32);
 
     impl RandomlyMutable for MyEntity {
-        fn mutate(&mut self, rate: f32) {
-            self.0 += fastrand::f32() * rate;
+        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            self.0 += rng.gen::<f32>() * rate;
         }
     }
 
     impl DivisionReproduction for MyEntity {
-        fn spawn_child(&self) -> Self {
+        fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
             let mut child = self.clone();
-            child.mutate(0.25);
+            child.mutate(0.25, rng);
             child
         }
     }
