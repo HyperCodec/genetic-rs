@@ -15,16 +15,16 @@
 //! 
 //! // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`
 //! impl RandomlyMutable for MyEntity {
-//!     fn mutate(&mut self, rate: f32) {
-//!         self.field1 += fastrand::f32() * rate;
+//!     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+//!         self.field1 += rng.gen::<f32>() * rate;
 //!     }
 //! }
 //! 
 //! // required for `division_pruning_nextgen`.
 //! impl DivisionReproduction for MyEntity {
-//!     fn spawn_child(&self) -> Self {
+//!     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
 //!         let mut child = self.clone();
-//!         child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
+//!         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
 //!         child
 //!     }
 //! }
@@ -105,16 +105,16 @@ pub mod prelude;
 /// }
 /// 
 /// impl RandomlyMutable for MyEntity {
-///     fn mutate(&mut self, rate: f32) {
-///         self.a += fastrand::f32() * rate;
-///         self.b += fastrand::f32() * rate;
+///     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+///         self.a += rng.gen::<f32>() * rate;
+///         self.b += rng.gen::<f32>() * rate;
 ///     }
 /// }
 /// 
 /// impl DivisionReproduction for MyEntity {
-///     fn spawn_child(&self) -> Self {
+///     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
 ///         let mut child = self.clone();
-///         child.mutate(0.25); // you'll generally want to use a constant mutation rate for mutating children.
+///         child.mutate(0.25, rng); // you'll generally want to use a constant mutation rate for mutating children.
 ///         child
 ///     }
 /// }
@@ -267,15 +267,15 @@ mod tests {
     struct MyEntity(f32);
 
     impl RandomlyMutable for MyEntity {
-        fn mutate(&mut self, rate: f32) {
-            self.0 += fastrand::f32() * rate;
+        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            self.0 += rng.gen::<f32>() * rate;
         }
     }
 
     impl DivisionReproduction for MyEntity {
-        fn spawn_child(&self) -> Self {
+        fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
             let mut child = self.clone();
-            child.mutate(0.25);
+            child.mutate(0.25, rng);
             child
         }
     }

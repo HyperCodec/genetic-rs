@@ -1,21 +1,21 @@
 /// Used in all of the builtin [next_gen]s to randomly mutate entities a given amount
 pub trait RandomlyMutable {
     /// Mutate the entity with a given mutation rate (0..1)
-    fn mutate(&mut self, rate: f32);
+    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng);
 }
 
 /// Used in dividually-reproducing [next_gen]s
 pub trait DivisionReproduction: RandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
-    fn spawn_child(&self) -> Self;
+    fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Used in crossover-reproducing [next_gen]s
 #[cfg(feature = "crossover")]
 pub trait CrossoverReproduction: RandomlyMutable {
     /// Use crossover reproduction to create a new entity.
-    fn spawn_child(&self, other: &Self) -> Self;
+    fn spawn_child(&self, other: &Self, rng: &mut impl Rng) -> Self;
 }
 
 /// Used in pruning [next_gen]s
@@ -29,7 +29,6 @@ pub trait Prunable: Sized {
 pub mod next_gen {
     use super::*;
 
-    #[cfg(feature = "crossover")] use rand::prelude::*;
     #[cfg(feature = "rayon")] use rayon::prelude::*;
 
     /// When making a new generation, it mutates each entity a certain amount depending on their reward.
@@ -39,12 +38,13 @@ pub mod next_gen {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
         let len = rewards.len() as f32;
+        let mut rng = rand::thread_rng();
 
         rewards
             .into_iter()
             .enumerate()
             .map(|(i, (mut e, _))| {
-                e.mutate(i as f32 / len);
+                e.mutate(i as f32 / len, &mut rng);
                 e
             })
             .collect()
@@ -55,12 +55,13 @@ pub mod next_gen {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
         let len = rewards.len() as f32;
+        let mut rng = rand::thread_rng();
 
         rewards
             .into_par_iter()
             .enumerate()
             .map(|(i, (mut e, _))| {
-                e.mutate(i as f32 / len);
+                e.mutate(i as f32 / len, &mut rng);
                 e
             })
             .collect()
@@ -72,6 +73,8 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
+        let mut rng = rand::thread_rng();
+
         let mut og_champions = next_gen
             .clone() // TODO remove if possible. currently doing so because `next_gen` is borrowed as mutable later
             .into_iter()
@@ -80,7 +83,7 @@ pub mod next_gen {
         while next_gen.len() < population_size {
             let e = og_champions.next().unwrap();
 
-            next_gen.push(e.spawn_child());
+            next_gen.push(e.spawn_child(&mut rng));
         }
 
         next_gen
@@ -105,13 +108,13 @@ pub mod next_gen {
 
         while next_gen.len() < population_size {
             let e1 = og_champs_cycle.next().unwrap();
-            let e2 = og_champions[rand::gen::<usize>(0..og_champions.len()-1)];
+            let e2 = og_champions[rng.gen::<usize>(0..og_champions.len()-1)];
 
             if !S && e1 == e2 {
                 continue;
             }
 
-            next_gen.push(e1.spawn_child(&e2));
+            next_gen.push(e1.spawn_child(&e2, &mut rng));
         }
 
         next_gen
