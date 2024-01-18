@@ -14,16 +14,16 @@ struct MyEntity {
 
 // required in all of the builtin functions as requirements of `DivsionReproduction` and `CrossoverReproduction`
 impl RandomlyMutable for MyEntity {
-    fn mutate(&mut self, rate: f32) {
-        self.field1 += fastrand::f32() * rate;
+    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+        self.field1 += rng.gen::<f32>() * rate;
     }
 }
 
 // required for `asexual_pruning_nextgen`.
 impl DivsionReproduction for MyEntity {
-    fn spawn_child(&self) -> Self {
+    fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
-        child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
+        child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
         child
     }
 }
