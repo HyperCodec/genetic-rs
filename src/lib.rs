@@ -333,9 +333,9 @@ mod tests {
 
     #[test]
     fn send_sim() {
-        let sim = Arc::new(GeneticSim::new(vec![()], |_| 0., division_pruning_nextgen));
+        let sim = Arc::new(GeneticSim::new(vec![()], |_| 0., |_| vec![()]));
 
-        let thing = move || {
+        let _thing = move || {
             sim
         };
     }
