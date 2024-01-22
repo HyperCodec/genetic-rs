@@ -333,10 +333,12 @@ mod tests {
 
     #[test]
     fn send_sim() {
-        let sim = Arc::new(GeneticSim::new(vec![()], |_| 0., |_| vec![()]));
+        let mut sim = Arc::new(GeneticSim::new(vec![()], |_| 0., |_| vec![()]));
 
-        let _thing = move || {
-            sim
-        };
+        let h = std::thread::spawn(move || {
+            sim.next_generation();
+        });
+
+        h.join();
     }
 }
