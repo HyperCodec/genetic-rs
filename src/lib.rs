@@ -84,7 +84,6 @@
 //! This project falls under the `MIT` license.
 
 use replace_with::replace_with_or_abort;
-use std::sync::Arc;
 
 /// Built-in nextgen functions and traits to go with them.
 #[cfg(feature = "builtin")] pub mod builtin;
@@ -158,8 +157,8 @@ where
 {
     /// The current population of entities
     pub entities: Vec<E>,
-    fitness: Arc<dyn Fn(&E) -> f32>,
-    next_gen: Arc<dyn Fn(Vec<(E, f32)>) -> Vec<E>>,
+    fitness: Box<dyn Fn(&E) -> f32 + Send + Sync + 'static>,
+    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
 }
 
 impl<E> GeneticSim<E>
@@ -170,13 +169,13 @@ where
     /// a given fitness function, and a given nextgen function.
     pub fn new(
         starting_entities: Vec<E>,
-        fitness: impl Fn(&E) -> f32 + 'static, 
-        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + 'static
+        fitness: impl Fn(&E) -> f32 + Send + Sync + 'static, 
+        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + Send + Sync + 'static
     ) -> Self {
         Self {
             entities: starting_entities,
-            fitness: Arc::new(fitness),
-            next_gen: Arc::new(next_gen),
+            fitness: Box::new(fitness),
+            next_gen: Box::new(next_gen),
         }
     }
 
@@ -333,12 +332,12 @@ mod tests {
 
     #[test]
     fn send_sim() {
-        let mut sim = Arc::new(GeneticSim::new(vec![()], |_| 0., |_| vec![()]));
+        let mut sim = GeneticSim::new(vec![()], |_| 0., |_| vec![()]);
 
         let h = std::thread::spawn(move || {
             sim.next_generation();
         });
 
-        h.join();
+        h.join().unwrap();
     }
 }
