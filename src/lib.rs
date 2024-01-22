@@ -84,6 +84,7 @@
 //! This project falls under the `MIT` license.
 
 use replace_with::replace_with_or_abort;
+use std::sync::Arc;
 
 /// Built-in nextgen functions and traits to go with them.
 #[cfg(feature = "builtin")] pub mod builtin;
@@ -157,8 +158,8 @@ where
 {
     /// The current population of entities
     pub entities: Vec<E>,
-    fitness: Box<dyn Fn(&E) -> f32>,
-    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E>>,
+    fitness: Arc<dyn Fn(&E) -> f32>,
+    next_gen: Arc<dyn Fn(Vec<(E, f32)>) -> Vec<E>>,
 }
 
 impl<E> GeneticSim<E>
@@ -174,8 +175,8 @@ where
     ) -> Self {
         Self {
             entities: starting_entities,
-            fitness: Box::new(fitness),
-            next_gen: Box::new(next_gen),
+            fitness: Arc::new(fitness),
+            next_gen: Arc::new(next_gen),
         }
     }
 
@@ -315,7 +316,7 @@ mod tests {
     }
 
     #[test]
-    fn a_prune() {
+    fn d_prune() {
         let mut rng = rand::thread_rng();
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 1000),
@@ -328,5 +329,14 @@ mod tests {
         }
 
         dbg!(sim.entities);
+    }
+
+    #[test]
+    fn send_sim() {
+        let sim = Arc::new(GeneticSim::new(vec![()], |_| 0., division_pruning_nextgen));
+
+        let thing = move || {
+            sim
+        };
     }
 }
