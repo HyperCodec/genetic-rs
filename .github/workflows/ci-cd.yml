@@ -12,4 +12,4 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - name: Run cargo test
-              run: cargo test --verbose
+              run: cargo test --verbose --features rayon, crossover
