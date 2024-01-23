@@ -151,6 +151,7 @@ pub mod prelude;
 ///     dbg!(sim.entities);
 /// }
 /// ```
+#[cfg(not(feature = "rayon"))]
 pub struct GeneticSim<E>
 where
     E: Sized,
@@ -161,6 +162,18 @@ where
     next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
 }
 
+#[cfg(feature = "rayon")]
+pub struct GeneticSim<E>
+where
+    E: Sized + Send,
+{
+    /// The current population of entities
+    pub entities: Vec<E>,
+    fitness: Box<dyn Fn(&E) -> f32 + Send + Sync + 'static>,
+    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
+}
+
+#[cfg(not(feature = "rayon"))]
 impl<E> GeneticSim<E>
 where
     E: Sized,
@@ -180,7 +193,6 @@ where
     }
 
     /// Uses the `next_gen` provided in [GeneticSim::new] to create the next generation of entities.
-    #[cfg(not(feature = "rayon"))]
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         replace_with_or_abort(&mut self.entities, |entities| {
@@ -195,8 +207,25 @@ where
             (self.next_gen)(rewards)
         });
     }
+}
 
-    #[cfg(feature = "rayon")]
+#[cfg(feature = "rayon")]
+impl<E> GeneticSim<E>
+where
+    E: Sized + Send,
+{
+    pub fn new(
+        starting_entities: Vec<E>,
+        fitness: impl Fn(&E) -> f32 + Send + Sync + 'static, 
+        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + Send + Sync + 'static
+    ) -> Self {
+        Self {
+            entities: starting_entities,
+            fitness: Box::new(fitness),
+            next_gen: Box::new(next_gen),
+        }
+    }
+
     pub fn next_generation(&mut self) {
         replace_with_or_abort(&mut self.entities, |entities| {
             let rewards = entities
@@ -222,13 +251,21 @@ pub trait GenerateRandom {
 }
 
 /// Blanket trait used on collections that contain objects implementing GenerateRandom
-#[cfg(feature = "genrand")]
+#[cfg(all(feature = "genrand", not(feature = "rayon")))]
 pub trait GenerateRandomCollection<T>
 where
     T: GenerateRandom,
 {
     /// Generate a random collection of the inner objects with a given amount
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
+}
+
+#[cfg(all(feature = "genrand", feature = "rayon"))]
+pub trait GenerateRandomCollection<T>
+where
+    T: GenerateRandom + Send,
+{
+    fn gen_random(amount: usize) -> Self;
 }
 
 #[cfg(not(feature = "rayon"))]
@@ -248,13 +285,13 @@ where
 #[cfg(feature = "rayon")]
 impl<C, T> GenerateRandomCollection<T> for C
 where
-    C: FromIterator<T>,
-    T: GenerateRandom,
+    C: FromParallelIterator<T>,
+    T: GenerateRandom + Send,
 {
-    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
+    fn gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
-            .map(|_| T::gen_random(rng))
+            .map(|_| T::gen_random(&mut rand::thread_rng()))
             .collect()
     }
 }
@@ -298,6 +335,7 @@ mod tests {
         (MAGIC_NUMBER - ent.0).abs() * -1.
     }
 
+    #[cfg(not(feature = "rayon"))]
     #[test]
     fn scramble() {
         let mut rng = rand::thread_rng();
@@ -314,6 +352,7 @@ mod tests {
         dbg!(sim.entities);
     }
 
+    #[cfg(not(feature = "rayon"))]
     #[test]
     fn d_prune() {
         let mut rng = rand::thread_rng();
@@ -339,5 +378,21 @@ mod tests {
         });
 
         h.join().unwrap();
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn rayon_test() {
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(100),
+            my_fitness_fn,
+            division_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.entities);
     }
 }
