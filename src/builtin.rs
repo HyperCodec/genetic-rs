@@ -15,7 +15,7 @@ pub trait DivisionReproduction: RandomlyMutable {
 #[cfg(feature = "crossover")]
 pub trait CrossoverReproduction: RandomlyMutable {
     /// Use crossover reproduction to create a new entity.
-    fn spawn_child(&self, other: &Self, rng: &mut impl Rng) -> Self;
+    fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Used in pruning [next_gen]s
@@ -28,6 +28,7 @@ pub trait Prunable: Sized {
 /// Contains functions used in [GeneticSim][crate::GeneticSim].
 pub mod next_gen {
     use super::*;
+    use rand::prelude::*;
 
     #[cfg(feature = "rayon")] use rayon::prelude::*;
     use rand::{rngs::StdRng, SeedableRng};
@@ -95,9 +96,42 @@ pub mod next_gen {
     }
 
     /// Prunes half of the entities and randomly breeds the remaining ones.
-    /// S: allow selfbreeding - false by default.
-    #[cfg(feature = "crossover")]
-    pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + Send, const S: bool = false>(rewards: Vec<(E, f32)>) -> Vec<E> {
+    #[cfg(all(
+        feature = "crossover",
+        not(feature = "rayon")
+    ))]
+    pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + PartialEq>(rewards: Vec<(E, f32)>) -> Vec<E> {
+        let population_size = rewards.len();
+        let mut next_gen = pruning_helper(rewards);
+
+        let mut rng = rand::thread_rng();
+        
+        // TODO remove clone smh
+        let og_champions = next_gen.clone();
+
+        let mut og_champs_cycle = og_champions
+            .iter()
+            .cycle();
+
+        while next_gen.len() < population_size {
+            let e1 = og_champs_cycle.next().unwrap();
+            let e2 = &og_champions[rng.gen_range(0..og_champions.len()-1)];
+
+            if e1 == e2 {
+                continue;
+            }
+
+            next_gen.push(e1.spawn_child(e2, &mut rng));
+        }
+
+        next_gen
+    }
+
+    #[cfg(all(
+        feature = "crossover",
+        feature = "rayon",
+    ))]
+    pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + Send>(rewards: Vec<(E, f32)>) -> Vec<E> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
@@ -112,13 +146,13 @@ pub mod next_gen {
 
         while next_gen.len() < population_size {
             let e1 = og_champs_cycle.next().unwrap();
-            let e2 = og_champions[rng.gen::<usize>(0..og_champions.len()-1)];
+            let e2 = &og_champions[rng.gen_range(0..og_champions.len()-1)];
 
-            if !S && e1 == e2 {
+            if e1 == e2 {
                 continue;
             }
 
-            next_gen.push(e1.spawn_child(&e2, &mut rng));
+            next_gen.push(e1.spawn_child(e2, &mut rng));
         }
 
         next_gen

@@ -300,7 +300,7 @@ where
 mod tests {
     use super::prelude::*;
 
-    #[derive(Default, Clone, Debug)]
+    #[derive(Default, Clone, Debug, PartialEq)]
     struct MyEntity(f32);
 
     impl RandomlyMutable for MyEntity {
@@ -329,10 +329,45 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "crossover")]
+    #[derive(Debug, Clone, PartialEq)]
+    struct MyCrossoverEntity(MyEntity);
+
+    #[cfg(feature = "crossover")]
+    impl RandomlyMutable for MyCrossoverEntity {
+        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            self.0.mutate(rate, rng);
+        }
+    }
+
+    #[cfg(feature = "crossover")]
+    impl CrossoverReproduction for MyCrossoverEntity {
+        fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+            let mut child = Self(MyEntity((self.0.0 + other.0.0) / 2.));
+            child.mutate(0.25, rng);
+            child
+        }
+    }
+
+    #[cfg(feature = "crossover")]
+    impl Prunable for MyCrossoverEntity {}
+
+    #[cfg(feature = "crossover")]
+    impl GenerateRandom for MyCrossoverEntity {
+        fn gen_random(rng: &mut impl rand::Rng) -> Self {
+            Self(MyEntity::gen_random(rng))
+        }
+    }
+
     const MAGIC_NUMBER: f32 = std::f32::consts::E;
 
     fn my_fitness_fn(ent: &MyEntity) -> f32 {
         (MAGIC_NUMBER - ent.0).abs() * -1.
+    }
+
+    #[cfg(feature = "crossover")]
+    fn my_crossover_fitness_fn(ent: &MyCrossoverEntity) -> f32 {
+        (MAGIC_NUMBER - ent.0.0).abs() * -1.
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -380,13 +415,18 @@ mod tests {
         h.join().unwrap();
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(all(
+        feature = "crossover",
+        not(feature = "rayon")
+    ))]
     #[test]
-    fn rayon_test() {
+    fn c_prune() {
+        let mut rng = rand::thread_rng();
+
         let mut sim = GeneticSim::new(
-            Vec::gen_random(100),
-            my_fitness_fn,
-            division_pruning_nextgen,
+            Vec::gen_random(&mut rng, 100),
+            my_crossover_fitness_fn,
+            crossover_pruning_nextgen,
         );
 
         for _ in 0..100 {
