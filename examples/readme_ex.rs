@@ -10,16 +10,16 @@ struct MyEntity {
 
 // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`.
 impl RandomlyMutable for MyEntity {
-    fn mutate(&mut self, rate: f32) {
-        self.field1 += fastrand::f32() * rate;
+    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+        self.field1 += rng.gen::<f32>() * rate;
     }
 }
 
 // required for `division_pruning_nextgen`.
 impl DivisionReproduction for MyEntity {
-    fn spawn_child(&self) -> Self {
+    fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
-        child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
+        child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
         child
     }
 }
@@ -45,6 +45,7 @@ fn my_fitness_fn(ent: &MyEntity) -> f32 {
     ent.field1
 }
 
+#[cfg(not(feature = "rayon"))]
 fn main() {
     let mut rng = rand::thread_rng();
     let mut sim = GeneticSim::new(
@@ -52,6 +53,25 @@ fn main() {
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
+        my_fitness_fn,
+        division_pruning_nextgen,
+    );
+ 
+    // perform evolution (100 gens)
+    for _ in 0..100 {
+        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.entities` in between these calls
+    }
+ 
+    dbg!(sim.entities);
+}
+
+#[cfg(feature = "rayon")]
+fn main() {
+    let mut sim = GeneticSim::new(
+        // you must provide a random starting population. 
+        // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
+        // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
+        Vec::gen_random(100),
         my_fitness_fn,
         division_pruning_nextgen,
     );

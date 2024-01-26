@@ -15,16 +15,16 @@
 //! 
 //! // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`
 //! impl RandomlyMutable for MyEntity {
-//!     fn mutate(&mut self, rate: f32) {
-//!         self.field1 += fastrand::f32() * rate;
+//!     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+//!         self.field1 += rng.gen::<f32>() * rate;
 //!     }
 //! }
 //! 
 //! // required for `division_pruning_nextgen`.
 //! impl DivisionReproduction for MyEntity {
-//!     fn spawn_child(&self) -> Self {
+//!     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
 //!         let mut child = self.clone();
-//!         child.mutate(0.25); // use a constant mutation rate when spawning children in pruning algorithms.
+//!         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
 //!         child
 //!     }
 //! }
@@ -105,16 +105,16 @@ pub mod prelude;
 /// }
 /// 
 /// impl RandomlyMutable for MyEntity {
-///     fn mutate(&mut self, rate: f32) {
-///         self.a += fastrand::f32() * rate;
-///         self.b += fastrand::f32() * rate;
+///     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+///         self.a += rng.gen::<f32>() * rate;
+///         self.b += rng.gen::<f32>() * rate;
 ///     }
 /// }
 /// 
 /// impl DivisionReproduction for MyEntity {
-///     fn spawn_child(&self) -> Self {
+///     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
 ///         let mut child = self.clone();
-///         child.mutate(0.25); // you'll generally want to use a constant mutation rate for mutating children.
+///         child.mutate(0.25, rng); // you'll generally want to use a constant mutation rate for mutating children.
 ///         child
 ///     }
 /// }
@@ -151,16 +151,29 @@ pub mod prelude;
 ///     dbg!(sim.entities);
 /// }
 /// ```
+#[cfg(not(feature = "rayon"))]
 pub struct GeneticSim<E>
 where
     E: Sized,
 {
     /// The current population of entities
     pub entities: Vec<E>,
-    fitness: Box<dyn Fn(&E) -> f32>,
-    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E>>,
+    fitness: Box<dyn Fn(&E) -> f32 + Send + Sync + 'static>,
+    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
 }
 
+#[cfg(feature = "rayon")]
+pub struct GeneticSim<E>
+where
+    E: Sized + Send,
+{
+    /// The current population of entities
+    pub entities: Vec<E>,
+    fitness: Box<dyn Fn(&E) -> f32 + Send + Sync + 'static>,
+    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
+}
+
+#[cfg(not(feature = "rayon"))]
 impl<E> GeneticSim<E>
 where
     E: Sized,
@@ -169,8 +182,8 @@ where
     /// a given fitness function, and a given nextgen function.
     pub fn new(
         starting_entities: Vec<E>,
-        fitness: impl Fn(&E) -> f32 + 'static, 
-        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + 'static
+        fitness: impl Fn(&E) -> f32 + Send + Sync + 'static, 
+        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + Send + Sync + 'static
     ) -> Self {
         Self {
             entities: starting_entities,
@@ -180,7 +193,6 @@ where
     }
 
     /// Uses the `next_gen` provided in [GeneticSim::new] to create the next generation of entities.
-    #[cfg(not(feature = "rayon"))]
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         replace_with_or_abort(&mut self.entities, |entities| {
@@ -195,8 +207,25 @@ where
             (self.next_gen)(rewards)
         });
     }
+}
 
-    #[cfg(feature = "rayon")]
+#[cfg(feature = "rayon")]
+impl<E> GeneticSim<E>
+where
+    E: Sized + Send,
+{
+    pub fn new(
+        starting_entities: Vec<E>,
+        fitness: impl Fn(&E) -> f32 + Send + Sync + 'static, 
+        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + Send + Sync + 'static
+    ) -> Self {
+        Self {
+            entities: starting_entities,
+            fitness: Box::new(fitness),
+            next_gen: Box::new(next_gen),
+        }
+    }
+
     pub fn next_generation(&mut self) {
         replace_with_or_abort(&mut self.entities, |entities| {
             let rewards = entities
@@ -222,13 +251,21 @@ pub trait GenerateRandom {
 }
 
 /// Blanket trait used on collections that contain objects implementing GenerateRandom
-#[cfg(feature = "genrand")]
+#[cfg(all(feature = "genrand", not(feature = "rayon")))]
 pub trait GenerateRandomCollection<T>
 where
     T: GenerateRandom,
 {
     /// Generate a random collection of the inner objects with a given amount
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
+}
+
+#[cfg(all(feature = "genrand", feature = "rayon"))]
+pub trait GenerateRandomCollection<T>
+where
+    T: GenerateRandom + Send,
+{
+    fn gen_random(amount: usize) -> Self;
 }
 
 #[cfg(not(feature = "rayon"))]
@@ -248,13 +285,13 @@ where
 #[cfg(feature = "rayon")]
 impl<C, T> GenerateRandomCollection<T> for C
 where
-    C: FromIterator<T>,
-    T: GenerateRandom,
+    C: FromParallelIterator<T>,
+    T: GenerateRandom + Send,
 {
-    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
+    fn gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
-            .map(|_| T::gen_random(rng))
+            .map(|_| T::gen_random(&mut rand::thread_rng()))
             .collect()
     }
 }
@@ -267,15 +304,15 @@ mod tests {
     struct MyEntity(f32);
 
     impl RandomlyMutable for MyEntity {
-        fn mutate(&mut self, rate: f32) {
-            self.0 += fastrand::f32() * rate;
+        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            self.0 += rng.gen::<f32>() * rate;
         }
     }
 
     impl DivisionReproduction for MyEntity {
-        fn spawn_child(&self) -> Self {
+        fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
             let mut child = self.clone();
-            child.mutate(0.25);
+            child.mutate(0.25, rng);
             child
         }
     }
@@ -298,6 +335,7 @@ mod tests {
         (MAGIC_NUMBER - ent.0).abs() * -1.
     }
 
+    #[cfg(not(feature = "rayon"))]
     #[test]
     fn scramble() {
         let mut rng = rand::thread_rng();
@@ -314,11 +352,39 @@ mod tests {
         dbg!(sim.entities);
     }
 
+    #[cfg(not(feature = "rayon"))]
     #[test]
-    fn a_prune() {
+    fn d_prune() {
         let mut rng = rand::thread_rng();
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 1000),
+            my_fitness_fn,
+            division_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.entities);
+    }
+
+    #[test]
+    fn send_sim() {
+        let mut sim = GeneticSim::new(vec![()], |_| 0., |_| vec![()]);
+
+        let h = std::thread::spawn(move || {
+            sim.next_generation();
+        });
+
+        h.join().unwrap();
+    }
+
+    #[cfg(feature = "rayon")]
+    #[test]
+    fn rayon_test() {
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(100),
             my_fitness_fn,
             division_pruning_nextgen,
         );
