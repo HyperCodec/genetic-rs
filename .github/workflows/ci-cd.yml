@@ -8,6 +8,7 @@ on:
 jobs:
     test:
         runs-on: ubuntu-latest
+        environment: testing
         name: Run Unit Tests
         steps:
             - uses: actions/checkout@v4
