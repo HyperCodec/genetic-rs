@@ -131,7 +131,7 @@ pub mod next_gen {
         feature = "crossover",
         feature = "rayon",
     ))]
-    pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + Send>(rewards: Vec<(E, f32)>) -> Vec<E> {
+    pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + Send + PartialEq>(rewards: Vec<(E, f32)>) -> Vec<E> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
@@ -194,5 +194,135 @@ pub mod next_gen {
                 Some(e)
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+
+    #[derive(Default, Clone, Debug, PartialEq)]
+    struct MyEntity(f32);
+
+    impl RandomlyMutable for MyEntity {
+        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            self.0 += rng.gen::<f32>() * rate;
+        }
+    }
+
+    impl DivisionReproduction for MyEntity {
+        fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
+            let mut child = self.clone();
+            child.mutate(0.25, rng);
+            child
+        }
+    }
+
+    impl Prunable for MyEntity {
+        fn despawn(self) {
+            println!("RIP {:?}", self);
+        }
+    }
+
+    impl GenerateRandom for MyEntity {
+        fn gen_random(rng: &mut impl Rng) -> Self {
+            Self(rng.gen())
+        }
+    }
+
+    #[cfg(feature = "crossover")]
+    #[derive(Debug, Clone, PartialEq)]
+    struct MyCrossoverEntity(MyEntity);
+
+    #[cfg(feature = "crossover")]
+    impl RandomlyMutable for MyCrossoverEntity {
+        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            self.0.mutate(rate, rng);
+        }
+    }
+
+    #[cfg(feature = "crossover")]
+    impl CrossoverReproduction for MyCrossoverEntity {
+        fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+            let mut child = Self(MyEntity((self.0.0 + other.0.0) / 2.));
+            child.mutate(0.25, rng);
+            child
+        }
+    }
+
+    #[cfg(feature = "crossover")]
+    impl Prunable for MyCrossoverEntity {}
+
+    #[cfg(feature = "crossover")]
+    impl GenerateRandom for MyCrossoverEntity {
+        fn gen_random(rng: &mut impl rand::Rng) -> Self {
+            Self(MyEntity::gen_random(rng))
+        }
+    }
+
+    const MAGIC_NUMBER: f32 = std::f32::consts::E;
+
+    fn my_fitness_fn(ent: &MyEntity) -> f32 {
+        (MAGIC_NUMBER - ent.0).abs() * -1.
+    }
+
+    #[cfg(feature = "crossover")]
+    fn my_crossover_fitness_fn(ent: &MyCrossoverEntity) -> f32 {
+        (MAGIC_NUMBER - ent.0.0).abs() * -1.
+    }
+
+    #[cfg(not(feature = "rayon"))]
+    #[test]
+    fn scramble() {
+        let mut rng = rand::thread_rng();
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(&mut rng, 1000), 
+            my_fitness_fn, 
+            scrambling_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.entities);
+    }
+
+    #[cfg(not(feature = "rayon"))]
+    #[test]
+    fn d_prune() {
+        let mut rng = rand::thread_rng();
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(&mut rng, 1000),
+            my_fitness_fn,
+            division_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.entities);
+    }
+
+    #[cfg(all(
+        feature = "crossover",
+        not(feature = "rayon")
+    ))]
+    #[test]
+    fn c_prune() {
+        let mut rng = rand::thread_rng();
+
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(&mut rng, 100),
+            my_crossover_fitness_fn,
+            crossover_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.entities);
     }
 }
