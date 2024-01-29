@@ -22,7 +22,7 @@ impl RandomlyMutable for MyEntity {
     }
 }
 
-// required for `asexual_pruning_nextgen`.
+// required for `division_pruning_nextgen`.
 impl DivsionReproduction for MyEntity {
     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
