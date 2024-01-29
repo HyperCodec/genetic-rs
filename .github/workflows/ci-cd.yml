@@ -21,7 +21,7 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - name: Run Clippy
-              run: cargo clippy -- -D warnings
+              run: cargo clippy --all-features -- -D warnings
     
     fmt:
         runs-on: ubuntu-latest
