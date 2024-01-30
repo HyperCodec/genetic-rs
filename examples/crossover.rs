@@ -14,7 +14,9 @@ impl RandomlyMutable for MyEntity {
 
 impl CrossoverReproduction for MyEntity {
     fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
-        let mut child = Self { val: (self.val + other.val) / 2.};
+        let mut child = Self {
+            val: (self.val + other.val) / 2.,
+        };
         child.mutate(0.25, rng);
         child
     }
@@ -30,14 +32,11 @@ impl GenerateRandom for MyEntity {
     }
 }
 
-
 fn main() {
     let mut rng = rand::thread_rng();
 
     let magic_number = rng.gen::<f32>() * 1000.;
-    let fitness = move |e: &MyEntity| -> f32 {
-        -(magic_number - e.val).abs()
-    };
+    let fitness = move |e: &MyEntity| -> f32 { -(magic_number - e.val).abs() };
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
