@@ -9,7 +9,7 @@ jobs:
     test:
         runs-on: ubuntu-latest
         environment: testing
-        name: Run Unit Tests
+        name: Unit Testing
         steps:
             - uses: actions/checkout@v4
             - name: Run cargo test
@@ -17,7 +17,7 @@ jobs:
 
     clippy:
         runs-on: ubuntu-latest
-        name: Run Clippy Linting Checks
+        name: Clippy Linting Checks
         steps:
             - uses: actions/checkout@v4
             - name: Run Clippy
@@ -25,7 +25,7 @@ jobs:
     
     fmt:
         runs-on: ubuntu-latest
-        name: Run Formatting Checks
+        name: Formatting Checks
         steps:
             - uses: actions/checkout@v4
             - name: Run cargo fmt
