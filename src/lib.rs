@@ -1,4 +1,5 @@
 #![warn(missing_docs)]
+#![allow(clippy::needless_doctest_main)]
 
 //! A small crate to quickstart genetic algorithm projects
 //! 
@@ -94,6 +95,13 @@ pub mod prelude;
 
 #[cfg(feature = "rayon")] use rayon::prelude::*;
 
+/// Represents a fitness function. Inputs a reference to the entity and outputs an f32.
+pub type FitnessFn<E> = dyn Fn(&E) -> f32 + Send + Sync + 'static;
+
+/// Represents a nextgen function. Inputs entities and rewards and produces the next generation
+pub type NextgenFn<E> = dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static;
+
+
 /// The simulation controller.
 /// ```rust
 /// use genetic_rs::prelude::*;
@@ -158,8 +166,8 @@ where
 {
     /// The current population of entities
     pub entities: Vec<E>,
-    fitness: Box<dyn Fn(&E) -> f32 + Send + Sync + 'static>,
-    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
+    fitness: Box<FitnessFn<E>>,
+    next_gen: Box<NextgenFn<E>>,
 }
 
 #[cfg(feature = "rayon")]
@@ -169,8 +177,8 @@ where
 {
     /// The current population of entities
     pub entities: Vec<E>,
-    fitness: Box<dyn Fn(&E) -> f32 + Send + Sync + 'static>,
-    next_gen: Box<dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static>,
+    fitness: Box<FitnessFn<E>>,
+    next_gen: Box<NextgenFn<E>>,
 }
 
 #[cfg(not(feature = "rayon"))]
@@ -183,7 +191,7 @@ where
     pub fn new(
         starting_entities: Vec<E>,
         fitness: impl Fn(&E) -> f32 + Send + Sync + 'static, 
-        next_gen: impl Fn(Vec<(E, f32) >) -> Vec<E> + Send + Sync + 'static
+        next_gen: impl Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static,
     ) -> Self {
         Self {
             entities: starting_entities,
