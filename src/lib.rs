@@ -170,6 +170,7 @@ where
     next_gen: Box<NextgenFn<E>>,
 }
 
+/// Rayon version of the [GeneticSim] struct
 #[cfg(feature = "rayon")]
 pub struct GeneticSim<E>
 where
@@ -222,6 +223,7 @@ impl<E> GeneticSim<E>
 where
     E: Sized + Send,
 {
+    /// Creates a new GeneticSim using a starting population, fitness function, and nextgen function
     pub fn new(
         starting_entities: Vec<E>,
         fitness: impl Fn(&E) -> f32 + Send + Sync + 'static, 
@@ -234,6 +236,7 @@ where
         }
     }
 
+    /// Performs selection and produces the next generation within the simulation.
     pub fn next_generation(&mut self) {
         replace_with_or_abort(&mut self.entities, |entities| {
             let rewards = entities
@@ -268,6 +271,7 @@ where
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
 }
 
+/// Rayon version of the [GenerateRandomCollection] trait
 #[cfg(all(feature = "genrand", feature = "rayon"))]
 pub trait GenerateRandomCollection<T>
 where

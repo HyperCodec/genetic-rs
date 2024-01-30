@@ -74,6 +74,7 @@ pub mod next_gen {
         next_gen
     }
 
+    /// Rayon version of the [division_pruning_nextgen] function
     #[cfg(feature = "rayon")]
     pub fn division_pruning_nextgen<E: DivisionReproduction + Prunable + Clone + Send>(rewards: Vec<(E, f32)>) -> Vec<E> {
         let population_size = rewards.len();
@@ -127,6 +128,7 @@ pub mod next_gen {
         next_gen
     }
 
+    /// Rayon version of the [crossover_pruning_nextgen] function.
     #[cfg(all(
         feature = "crossover",
         feature = "rayon",
@@ -158,6 +160,7 @@ pub mod next_gen {
         next_gen
     }
 
+    /// helps with builtin pruning nextgens
     #[cfg(not(feature = "rayon"))]
     fn pruning_helper<E: Prunable + Clone>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
@@ -177,6 +180,7 @@ pub mod next_gen {
             .collect()
     }
 
+    /// Rayon version of [pruning_helper].
     #[cfg(feature = "rayon")]
     fn pruning_helper<E: Prunable + Send>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
