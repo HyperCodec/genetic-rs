@@ -16,6 +16,7 @@ default = ["builtin", "genrand"]
 builtin = []
 crossover = []
 genrand = []
+neat = ["builtin"]
 rayon = ["dep:rayon"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

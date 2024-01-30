@@ -90,6 +90,10 @@ use replace_with::replace_with_or_abort;
 #[cfg(feature = "builtin")]
 pub mod builtin;
 
+/// Built-in NEAT implementation
+#[cfg(feature = "neat")]
+pub mod neat;
+
 /// Used to quickly import everything this crate has to offer.
 /// Simply add `use genetic_rs::prelude::*` to begin using this crate.
 pub mod prelude;
