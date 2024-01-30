@@ -1,6 +1,7 @@
 # genetic-rs
 ![Crates.io Total Downloads](https://img.shields.io/crates/d/genetic-rs)
-![GitHub deployments](https://img.shields.io/github/deployments/HyperCodec/genetic-rs/testing)
+![GitHub last commit](https://img.shields.io/github/last-commit/HyperCodec/genetic-rs)
+![docs.rs](https://img.shields.io/docsrs/genetic-rs)
 
 A small crate for quickstarting genetic algorithm projects
 
