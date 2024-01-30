@@ -277,6 +277,7 @@ pub trait GenerateRandomCollection<T>
 where
     T: GenerateRandom + Send,
 {
+    /// Generate a random collection of the inner objects with the given amount. Does not pass in rng like the sync counterpart.
     fn gen_random(amount: usize) -> Self;
 }
 
