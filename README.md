@@ -1,4 +1,9 @@
 # genetic-rs
+
+[<img alt="github" src="https://img.shields.io/github/last-commit/hypercodec/genetic-rs" height="20">](https://github.com/hypercodec/genetic-rs)
+[<img alt="crates.io" src="https://img.shields.io/crates/d/genetic-rs" height="20">](https://crates.io/crates/genetic-rs)
+[<img alt="docs.rs" src="https://img.shields.io/docsrs/genetic-rs" height="20">](https://docs.rs/genetic-rs)
+
 A small crate for quickstarting genetic algorithm projects
 
 ### How to Use
@@ -19,7 +24,7 @@ impl RandomlyMutable for MyEntity {
     }
 }
 
-// required for `asexual_pruning_nextgen`.
+// required for `division_pruning_nextgen`.
 impl DivsionReproduction for MyEntity {
     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
