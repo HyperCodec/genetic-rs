@@ -72,22 +72,22 @@ impl NeuralNetwork {
     fn rand_neuron_mut(&mut self, rng: &mut impl rand::Rng) -> (&mut Rc<Neuron>, NeuronLocator) {
         if rng.gen::<f32>() <= 0.5 {
             let i = rng.gen_range(0..self.output_layer.len());
-            return (&mut self.output_layer[i], NeuronLocator::OutputLayer(i));
+            return (&mut self.output_layer[i], NeuronLocator::Output(i));
         }
 
         let i = rng.gen_range(0..self.hidden_layers.len());
-        (&mut self.hidden_layers[i], NeuronLocator::HiddenLayer(i))
+        (&mut self.hidden_layers[i], NeuronLocator::Hidden(i))
     }
 
 
     fn rand_neuron(&self, rng: &mut impl rand::Rng) -> (&Rc<Neuron>, NeuronLocator) {
         if rng.gen::<f32>() <= 0.5 {
             let i = rng.gen_range(0..self.output_layer.len());
-            return (&self.output_layer[i], NeuronLocator::OutputLayer(i));
+            return (&self.output_layer[i], NeuronLocator::Output(i));
         }
 
         let i = rng.gen_range(0..self.hidden_layers.len());
-        (&self.hidden_layers[i], NeuronLocator::HiddenLayer(i))
+        (&self.hidden_layers[i], NeuronLocator::Hidden(i))
     }
 
     fn is_connection_safe(&self, n1: &Rc<Neuron>, n2: &Rc<Neuron>) -> bool {
@@ -120,15 +120,15 @@ impl RandomlyMutable for NeuralNetwork {
                 }
 
                 let n2 = match loc2 {
-                    NeuronLocator::InputLayer(i) => self.input_layer[i].clone(),
-                    NeuronLocator::HiddenLayer(i) => self.hidden_layers[i].clone(),
-                    NeuronLocator::OutputLayer(i) => self.output_layer[i].clone(),
+                    NeuronLocator::Input(i) => self.input_layer[i].clone(),
+                    NeuronLocator::Hidden(i) => self.hidden_layers[i].clone(),
+                    NeuronLocator::Output(i) => self.output_layer[i].clone(),
                 };
 
                 let n1 = match loc1 {
-                    NeuronLocator::InputLayer(i) => Rc::get_mut(&mut self.input_layer[i]).unwrap(),
-                    NeuronLocator::HiddenLayer(i) => Rc::get_mut(&mut self.hidden_layers[i]).unwrap(),
-                    NeuronLocator::OutputLayer(i) => Rc::get_mut(&mut self.output_layer[i]).unwrap(),
+                    NeuronLocator::Input(i) => Rc::get_mut(&mut self.input_layer[i]).unwrap(),
+                    NeuronLocator::Hidden(i) => Rc::get_mut(&mut self.hidden_layers[i]).unwrap(),
+                    NeuronLocator::Output(i) => Rc::get_mut(&mut self.output_layer[i]).unwrap(),
                 };
 
                 n1.inputs.push((n2, rng.gen::<f32>()));
@@ -269,9 +269,9 @@ impl GenerateRandom for NetworkWideMutation {
 
 #[allow(dead_code)]
 enum NeuronLocator {
-    InputLayer(usize),
-    HiddenLayer(usize),
-    OutputLayer(usize),
+    Input(usize),
+    Hidden(usize),
+    Output(usize),
 }
 
 #[cfg(test)]
