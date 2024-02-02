@@ -267,6 +267,7 @@ impl GenerateRandom for NetworkWideMutation {
     }
 }
 
+#[allow(dead_code)]
 enum NeuronLocator {
     InputLayer(usize),
     HiddenLayer(usize),
