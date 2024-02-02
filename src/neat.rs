@@ -36,6 +36,10 @@ impl NeuralNetwork {
             panic!("Invalid inputs length. Expected {}, found {}", self.input_layer.len(), inputs.len());
         }
 
+        for (i, v) in inputs.into_iter().enumerate() {
+            Rc::get_mut(&mut self.input_layer[i]).unwrap().state.value = v;
+        }
+
         self.output_layer
             .iter_mut()
             .map(|n| Rc::get_mut(n).unwrap().process())
