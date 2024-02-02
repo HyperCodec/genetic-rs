@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use std::rc::Rc;
 
+/// A builtin struct that uses the NEAT (Neuro-Evolution Augmented Topology) algorithm.
+/// TODO example
 #[derive(Clone)]
 pub struct NeuralNetwork {
     input_layer: Vec<Rc<Neuron>>,
@@ -9,6 +11,7 @@ pub struct NeuralNetwork {
 }
 
 impl NeuralNetwork {
+    /// Creates a simple neural network with 1 hidden layer. This is so that it is still able to be functional, while also mutating without being restrained by any layer boundaries.
     pub fn new(inputs: usize, hidden: usize, outputs: usize) -> Self {
         let mut rng = rand::thread_rng();
 
@@ -31,13 +34,18 @@ impl NeuralNetwork {
         }
     }
 
+    /// Runs the neural network based on the given input. **IMPORTANT: you must run [flush_state][NeuralNetwork::flush_state] if you wish to run this network multiple times.**
+    /// Input length must be the same as the original one provided to the network.
     pub fn predict(&mut self, inputs: Vec<f32>) -> Vec<f32> {
         if inputs.len() != self.input_layer.len() {
+            // TODO comptime input shape? possible with const generics.
             panic!("Invalid inputs length. Expected {}, found {}", self.input_layer.len(), inputs.len());
         }
 
         for (i, v) in inputs.into_iter().enumerate() {
-            Rc::get_mut(&mut self.input_layer[i]).unwrap().state.value = v;
+            let n = Rc::get_mut(&mut self.input_layer[i]).unwrap();
+            n.state.value = v;
+            n.state.processed = true;
         }
 
         self.output_layer
@@ -46,6 +54,7 @@ impl NeuralNetwork {
             .collect()
     }
 
+    /// Flushes the neural network state after a call to [predict][NeuralNetwork::predict].
     pub fn flush_state(&mut self) {
         for n in self.input_layer.iter_mut() {
             Rc::get_mut(n).unwrap().flush_state();
@@ -170,14 +179,18 @@ impl DivisionReproduction for NeuralNetwork {
     }
 }
 
+/// A neuron in the [NeuralNetwork] struct. Holds connections to previous layers and state.
 #[derive(Clone, PartialEq)]
 pub struct Neuron {
     inputs: Vec<(Rc<Neuron>, f32)>,
     bias: f32,
-    state: NeuronState,
+
+    /// The state of the neuron. Used in [NeuralNetwork::predict]
+    pub state: NeuronState,
 }
 
 impl Neuron {
+    /// Create a new neuron based on the preceding layer.
     pub fn new(inputs: Vec<Rc<Neuron>>, rng: &mut impl rand::Rng) -> Self {
         let inputs = inputs
             .into_iter()
@@ -196,6 +209,7 @@ impl Neuron {
         }
     }
 
+    /// Recursively solve the value of this neuron and its predecessors.
     pub fn process(&mut self) -> f32 {
         if self.state.processed {
             return self.state.value;
@@ -210,21 +224,35 @@ impl Neuron {
         self.state.value
     }
 
+    /// Flush the neuron's state. Called by [NeuralNetwork::flush_state]
     pub fn flush_state(&mut self) {
         self.state.value = self.bias;
+        self.state.processed = false;
     }
 }
 
+/// The state of a neuron.
 #[derive(Default, Clone, PartialEq)]
 pub struct NeuronState {
+    /// The neuron's value. This will likely be initialized by bias unless it is an input neuron.
     pub value: f32,
+
+    /// Whether or not the neuron has been processed already. Used for caching in the recursive algo.
     pub processed: bool,
 }
 
+/// An enum to organize network mutation types.
 pub enum NetworkWideMutation {
+    /// Adds a connection between two neurons.
     AddConnection,
+
+    /// Removes a connection between two neurons.
     RemoveConnection,
+
+    /// Splits an existing connection by placing a neuron in the middle.
     AddNeuron,
+
+    /// Removes a neuron and the connections surrounding it.
     RemoveNeuron,
 }
 
