@@ -309,7 +309,7 @@ impl NeuralNetwork {
         }
 
         for (i, v) in inputs.into_iter().enumerate() {
-            let mut n = self.input_layer[i].lock().unwrap();
+            let mut n = self.input_layer[i].try_lock().unwrap();
             n.state.value = v;
             n.state.processed = true;
         }
@@ -317,11 +317,12 @@ impl NeuralNetwork {
         let mut outputs = Vec::with_capacity(self.output_layer.len());
         for i in 0..self.output_layer.len() {
             let nrc = Rc::clone(&self.output_layer[i]);
-            let mut n = nrc.lock().unwrap();
+            let mut n = nrc.try_lock().unwrap();
             let mut work = n.inputs.clone();
 
             while let Some((ptr, w)) = work.pop() {
-                let n2 = self.get_neuron_mut(ptr);
+                let n2m = self.get_neuron(ptr);
+                let n2 = n2m.try_lock().unwrap(); // cause of hang
 
                 if n2.state.processed {
                     n.state.value += n2.state.value * w;
@@ -352,19 +353,11 @@ impl NeuralNetwork {
     }
 
     // TODO merge mut and normal version (also probably just return mutex instead of guard, safer that way)
-    fn get_neuron(&self, ptr: NeuronPointer) -> MutexGuard<Neuron> {
+    fn get_neuron(&self, ptr: NeuronPointer) -> Rc<Mutex<Neuron>> {
         match ptr {
-            NeuronPointer::Input(i) => self.input_layer[i].lock().unwrap(),
-            NeuronPointer::Hidden(i) => self.hidden_layers[i].lock().unwrap(),
-            NeuronPointer::Output(i) => self.output_layer[i].lock().unwrap(),
-        }
-    }
-
-    fn get_neuron_mut(&mut self, ptr: NeuronPointer) -> MutexGuard<Neuron> {
-        match ptr {
-            NeuronPointer::Input(i) => self.input_layer[i].lock().unwrap(),
-            NeuronPointer::Hidden(i) => self.hidden_layers[i].lock().unwrap(),
-            NeuronPointer::Output(i) => self.output_layer[i].lock().unwrap(),
+            NeuronPointer::Input(i) => self.input_layer[i].clone(),
+            NeuronPointer::Hidden(i) => self.hidden_layers[i].clone(),
+            NeuronPointer::Output(i) => self.output_layer[i].clone(),
         }
     }
 }
