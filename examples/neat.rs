@@ -114,7 +114,7 @@ fn main() {
         division_pruning_nextgen,
     );
 
-    for _ in 0..100 {
+    for _ in 0..300 {
         // shouldn't need to do anything with `sim.entities` since this is still simple enough to run within the scope of the fitness function.
         sim.next_generation();
 
