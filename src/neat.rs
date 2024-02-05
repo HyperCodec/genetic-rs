@@ -1,4 +1,4 @@
-use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
+use std::{cell::{Ref, RefCell, RefMut}, rc::Rc, sync::{Mutex, MutexGuard}};
 
 use crate::prelude::*;
 
@@ -271,9 +271,9 @@ impl NeuronPointer {
 /// TODO example
 #[derive(Clone)]
 pub struct NeuralNetwork {
-    input_layer: Vec<Rc<RefCell<Neuron>>>,
-    hidden_layers: Vec<Rc<RefCell<Neuron>>>,
-    output_layer: Vec<Rc<RefCell<Neuron>>>,
+    input_layer: Vec<Rc<Mutex<Neuron>>>,
+    hidden_layers: Vec<Rc<Mutex<Neuron>>>,
+    output_layer: Vec<Rc<Mutex<Neuron>>>,
 }
 
 impl NeuralNetwork {
@@ -282,15 +282,15 @@ impl NeuralNetwork {
         let mut rng = rand::thread_rng();
 
         let input_layer: Vec<_> = (0..inputs)
-            .map(|_| Rc::new(RefCell::new(Neuron::new(vec![], &mut rng))))
+            .map(|_| Rc::new(Mutex::new(Neuron::new(vec![], &mut rng))))
             .collect();
 
         let hidden_layers: Vec<_> = (0..hidden)
-            .map(|_| Rc::new(RefCell::new(Neuron::new((0..inputs).map(|i| NeuronPointer::Input(i)), &mut rng))))
+            .map(|_| Rc::new(Mutex::new(Neuron::new((0..inputs).map(|i| NeuronPointer::Input(i)), &mut rng))))
             .collect();
 
         let output_layer: Vec<_> = (0..outputs)
-            .map(|_| Rc::new(RefCell::new(Neuron::new((0..hidden).map(|i| NeuronPointer::Hidden(i)), &mut rng))))
+            .map(|_| Rc::new(Mutex::new(Neuron::new((0..hidden).map(|i| NeuronPointer::Hidden(i)), &mut rng))))
             .collect();
 
         Self {
@@ -309,7 +309,7 @@ impl NeuralNetwork {
         }
 
         for (i, v) in inputs.into_iter().enumerate() {
-            let mut n = self.input_layer[i].borrow_mut();
+            let mut n = self.input_layer[i].lock().unwrap();
             n.state.value = v;
             n.state.processed = true;
         }
@@ -317,7 +317,7 @@ impl NeuralNetwork {
         let mut outputs = Vec::with_capacity(self.output_layer.len());
         for i in 0..self.output_layer.len() {
             let nrc = Rc::clone(&self.output_layer[i]);
-            let mut n = nrc.borrow_mut();
+            let mut n = nrc.lock().unwrap();
             let mut work = n.inputs.clone();
 
             while let Some((ptr, w)) = work.pop() {
@@ -339,31 +339,32 @@ impl NeuralNetwork {
     /// Flushes the neural network state after a call to [predict][NeuralNetwork::predict].
     pub fn flush_state(&mut self) {
         for n in &self.input_layer {
-            n.borrow_mut().flush_state();
+            n.lock().unwrap().flush_state();
         }
 
         for n in &self.hidden_layers {
-            n.borrow_mut().flush_state();
+            n.lock().unwrap().flush_state();
         }
 
         for n in &self.output_layer {
-            n.borrow_mut().flush_state();
+            n.lock().unwrap().flush_state();
         }
     }
 
-    fn get_neuron(&self, ptr: NeuronPointer) -> Ref<Neuron> {
+    // TODO merge mut and normal version (also probably just return mutex instead of guard, safer that way)
+    fn get_neuron(&self, ptr: NeuronPointer) -> MutexGuard<Neuron> {
         match ptr {
-            NeuronPointer::Input(i) => self.input_layer[i].borrow(),
-            NeuronPointer::Hidden(i) => self.hidden_layers[i].borrow(),
-            NeuronPointer::Output(i) => self.output_layer[i].borrow(),
+            NeuronPointer::Input(i) => self.input_layer[i].lock().unwrap(),
+            NeuronPointer::Hidden(i) => self.hidden_layers[i].lock().unwrap(),
+            NeuronPointer::Output(i) => self.output_layer[i].lock().unwrap(),
         }
     }
 
-    fn get_neuron_mut(&mut self, ptr: NeuronPointer) -> RefMut<Neuron> {
+    fn get_neuron_mut(&mut self, ptr: NeuronPointer) -> MutexGuard<Neuron> {
         match ptr {
-            NeuronPointer::Input(i) => self.input_layer[i].borrow_mut(),
-            NeuronPointer::Hidden(i) => self.hidden_layers[i].borrow_mut(),
-            NeuronPointer::Output(i) => self.output_layer[i].borrow_mut(),
+            NeuronPointer::Input(i) => self.input_layer[i].lock().unwrap(),
+            NeuronPointer::Hidden(i) => self.hidden_layers[i].lock().unwrap(),
+            NeuronPointer::Output(i) => self.output_layer[i].lock().unwrap(),
         }
     }
 }
@@ -373,21 +374,21 @@ impl From<&StatelessNeuralNetwork> for NeuralNetwork {
         let input_layer = value.input_layer
             .iter()
             .map(Neuron::from)
-            .map(RefCell::new)
+            .map(Mutex::new)
             .map(Rc::new)
             .collect();
 
         let hidden_layers = value.hidden_layers
             .iter()
             .map(Neuron::from)
-            .map(RefCell::new)
+            .map(Mutex::new)
             .map(Rc::new)
             .collect();
 
         let output_layer = value.output_layer
             .iter()
             .map(Neuron::from)
-            .map(RefCell::new)
+            .map(Mutex::new)
             .map(Rc::new)
             .collect();
 

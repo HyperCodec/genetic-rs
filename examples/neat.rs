@@ -3,10 +3,8 @@ use std::sync::{Arc, RwLock};
 use genetic_rs::prelude::*;
 use rand::prelude::*;
 
-fn simulate_agent(dna: &AgentDNA, max_steps: usize) -> f32 {
+fn simulate_agent(dna: &AgentDNA, max_steps: usize, rng: &mut impl Rng) -> f32 {
     let mut agent = Agent::from(dna);
-
-    let mut rng = rand::thread_rng();
 
     let mut food_pos: (usize, usize);
     let mut agent_pos: (usize, usize);
@@ -100,13 +98,18 @@ fn main() {
 
     let max_steps = Arc::new(RwLock::new(10));
     let ms = max_steps.clone();
+
+    let seed = Arc::new(RwLock::new(rng.gen::<[u8; 32]>()));
+    let s = seed.clone();
+
     let fitness = move |dna: &AgentDNA| {
         let msr = ms.read().unwrap();
-        simulate_agent(dna, *msr)
+        let sr = s.read().unwrap();
+        simulate_agent(dna, *msr, &mut StdRng::from_seed(*sr))
     };
 
     let mut sim = GeneticSim::new(
-        Vec::gen_random(&mut rng, 500),
+        Vec::gen_random(&mut rng, 100),
         fitness.clone(), // just cloned for the sum stuff later
         division_pruning_nextgen,
     );
@@ -118,6 +121,10 @@ fn main() {
         // increase step count with each generation
         let mut msw = max_steps.write().unwrap();
         *msw += 1;
+
+        // change seed
+        let mut sw = seed.write().unwrap();
+        *sw = rng.gen();
     }
 
     // test networks
