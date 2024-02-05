@@ -11,7 +11,7 @@ pub struct StatelessNeuralNetwork {
 
 impl StatelessNeuralNetwork {
     pub fn new(inputs: usize, hidden: usize, outputs: usize) -> Self {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::thread_rng(); // TODO maybe make a param?
 
         let input_layer: Vec<_> = (0..inputs)
             .map(|i| StatelessNeuron::new(vec![], NeuronPointer::Input(i), &mut rng))
