@@ -1,3 +1,6 @@
+/*
+*/
+
 use std::sync::{Arc, RwLock};
 
 use genetic_rs::prelude::*;
@@ -66,7 +69,7 @@ impl From<&AgentDNA> for Agent {
 
 #[derive(Clone)]
 struct AgentDNA {
-    network: StatelessNeuralNetwork,
+    network: NeuralNetworkTopology,
 }
 
 impl RandomlyMutable for AgentDNA {
@@ -88,7 +91,7 @@ impl Prunable for AgentDNA {}
 impl GenerateRandom for AgentDNA {
     fn gen_random(_rng: &mut impl Rng) -> Self {
         Self {
-            network: StatelessNeuralNetwork::new(2, 3, 2),
+            network: NeuralNetworkTopology::new(2, 3, 2, 0.25),
         }
     }
 }
@@ -109,12 +112,12 @@ fn main() {
     };
 
     let mut sim = GeneticSim::new(
-        Vec::gen_random(&mut rng, 100),
+        Vec::gen_random(100),
         fitness.clone(), // just cloned for the sum stuff later
         division_pruning_nextgen,
     );
 
-    for _ in 0..300 {
+    for _ in 0..100 { // because this is more complex, it needs a lot of generations
         // shouldn't need to do anything with `sim.entities` since this is still simple enough to run within the scope of the fitness function.
         sim.next_generation();
 

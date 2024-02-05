@@ -3,14 +3,15 @@ use std::{cell::{Ref, RefCell, RefMut}, rc::Rc, sync::{Mutex, MutexGuard}};
 use crate::prelude::*;
 
 #[derive(Clone)]
-pub struct StatelessNeuralNetwork {
+pub struct NeuralNetworkTopology {
     input_layer: Vec<StatelessNeuron>,
     hidden_layers: Vec<StatelessNeuron>,
     output_layer: Vec<StatelessNeuron>,
+    pub mutation_rate: f32,
 }
 
-impl StatelessNeuralNetwork {
-    pub fn new(inputs: usize, hidden: usize, outputs: usize) -> Self {
+impl NeuralNetworkTopology {
+    pub fn new(inputs: usize, hidden: usize, outputs: usize, mutation_rate: f32) -> Self {
         let mut rng = rand::thread_rng(); // TODO maybe make a param?
 
         let input_layer: Vec<_> = (0..inputs)
@@ -29,6 +30,7 @@ impl StatelessNeuralNetwork {
             input_layer,
             hidden_layers,
             output_layer,
+            mutation_rate,
         }
     }
 
@@ -90,6 +92,7 @@ impl StatelessNeuralNetwork {
         if let NeuronPointer::Hidden(i) = ptr {
             let out = self.hidden_layers.remove(i); // still errors if out of bounds
 
+            // TODO remove all pointers to the neuron.
             self.shift_neuron_pointers_for_deletion(ptr);
 
             return Some(out);
@@ -121,13 +124,9 @@ impl StatelessNeuralNetwork {
     }
 }
 
-impl RandomlyMutable for StatelessNeuralNetwork {
+impl RandomlyMutable for NeuralNetworkTopology {
     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-        // network-wide mutation
-        let mutation = NetworkWideMutation::gen_random(rng);
-
-        match mutation {
-            NetworkWideMutation::AddConnection => {
+        if rng.gen::<f32>() <= rate {
                 // add connection between two neurons, but take caution to make sure it isn't looping into itself.
                 let (mut n1, mut loc1) = self.rand_neuron(rng);
                 let (mut n2, mut loc2) = self.rand_neuron(rng);
@@ -141,81 +140,65 @@ impl RandomlyMutable for StatelessNeuralNetwork {
                 let n1 = self.get_neuron_mut(loc1);
 
                 n1.inputs.push((loc2, rng.gen::<f32>()));
-            },
-            NetworkWideMutation::RemoveConnection => {
-                let n = self.rand_neuron_mut(rng).0;
-                n.inputs.remove(rng.gen_range(0..n.inputs.len()));
-            },
-            NetworkWideMutation::AddNeuron => {
-                // split preexisting connection to put new neuron in.
-                let (pn, i, n2, w);
+        }
+
+        /*
+        if rng.gen::<f32>() <= rate {
+            // remove connection
+            let n = self.rand_neuron_mut(rng).0;
+            n.inputs.remove(rng.gen_range(0..n.inputs.len()));
+        }
+        */
+
+        if rng.gen::<f32>() <= rate {
+            // split preexisting connection to put new neuron in.
+            let (pn, i, n2, w);
                 
-                {
-                    let npn = self.rand_neuron_mut(rng);
-                    let n = npn.0;
-                    pn = npn.1;
+            {
+                let npn = self.rand_neuron_mut(rng);
+                let n = npn.0;
+                pn = npn.1;
 
-                    i = rng.gen_range(0..n.inputs.len());
-                    (n2, w) = n.inputs.remove(i);
-                    
-                }
+                i = rng.gen_range(0..n.inputs.len());
+                (n2, w) = n.inputs.remove(i);
+            }
                 
-                let n3 = StatelessNeuron::new(vec![n2], NeuronPointer::Input(i), rng);
-                let loc = NeuronPointer::Hidden(self.hidden_layers.len());
-                self.hidden_layers.push(n3);
+            let n3 = StatelessNeuron::new(vec![n2], NeuronPointer::Input(i), rng);
+            let loc = NeuronPointer::Hidden(self.hidden_layers.len());
+            self.hidden_layers.push(n3);
 
 
-                let n = self.get_neuron_mut(pn);
+            let n = self.get_neuron_mut(pn);
 
-                n.inputs.push((loc, w));
-            },
-            NetworkWideMutation::RemoveNeuron => {
-                let i = rng.gen_range(0..self.hidden_layers.len());
-                let ptr = NeuronPointer::Hidden(i);
-                self.delete_neuron_raw(ptr);
-            },
+            n.inputs.push((loc, w));
         }
 
-        // change weights
-        for n in self.hidden_layers.iter_mut() {
-            for (_n2, w) in n.inputs.iter_mut() {
-                if rng.gen::<f32>() < rate {
-                    *w += rng.gen::<f32>() * rate;
-                }
-            }
+        /*
+        if rng.gen::<f32>() <= rate {
+            // remove neuron and connections leading into it.
+            let i = rng.gen_range(0..self.hidden_layers.len());
+            let ptr = NeuronPointer::Hidden(i);
+            self.delete_neuron_raw(ptr);
         }
+        */
 
-        for n in self.output_layer.iter_mut() {
-            for (_n2, w) in n.inputs.iter_mut() {
-                if rng.gen::<f32>() < rate {
-                    *w += rng.gen::<f32>() * rate;
-                }
-            }
+        if rng.gen::<f32>() <= rate {
+            // change weight of random connection
+            let (n, _ptr) = self.rand_neuron_mut(rng);
+
+            let l = n.inputs.len();
+            n.inputs[rng.gen_range(0..l)].1 += rng.gen::<f32>() * rate;
         }
+        
     }
 }
 
-impl DivisionReproduction for StatelessNeuralNetwork {
+impl DivisionReproduction for NeuralNetworkTopology {
     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
-        child.mutate(0.01, rng); // TODO customizable rate
+        child.mutate(self.mutation_rate, rng); // TODO customizable rate
         child
     }
-}
-
-/// An enum to organize network mutation types.
-pub enum NetworkWideMutation {
-    /// Adds a connection between two neurons.
-    AddConnection,
-
-    /// Removes a connection between two neurons.
-    RemoveConnection,
-
-    /// Splits an existing connection by placing a neuron in the middle.
-    AddNeuron,
-
-    /// Removes a neuron and the connections surrounding it.
-    RemoveNeuron,
 }
 
 #[derive(Clone, PartialEq)]
@@ -319,27 +302,27 @@ impl NeuralNetwork {
             n.state.processed = true;
         }
 
-        let mut outputs = Vec::with_capacity(self.output_layer.len());
-        for i in 0..self.output_layer.len() {
-            let nrc = Rc::clone(&self.output_layer[i]);
-            let mut n = nrc.try_lock().unwrap();
-            let mut work = n.inputs.clone();
+        (0..self.output_layer.len())
+            .map(|i| self.process_neuron(NeuronPointer::Output(i)))
+            .collect()
+    }
 
-            while let Some((ptr, w)) = work.pop() {
-                let n2rc = self.get_neuron(ptr);
-                let n2 = n2rc.try_lock().unwrap(); // cause of hang
+    fn process_neuron(&mut self, ptr: NeuronPointer) -> f32 {
+        let nrc = self.get_neuron(ptr);
+        let mut n = nrc.try_lock().unwrap(); // new block error
 
-                if n2.state.processed {
-                    n.state.value += n2.state.value * w;
-                }
-            }
-
-            n.state.processed = true;
-
-            outputs.push(n.state.value);
+        if n.state.processed {
+            return n.state.value;
         }
 
-        outputs
+        for (ptr2, w) in n.inputs.clone() {
+            n.state.value += self.process_neuron(ptr2) * w;
+        }
+
+        n.sigmoid();
+        n.state.processed = true;
+
+        n.state.value
     }
 
     /// Flushes the neural network state after a call to [predict][NeuralNetwork::predict].
@@ -367,8 +350,8 @@ impl NeuralNetwork {
     }
 }
 
-impl From<&StatelessNeuralNetwork> for NeuralNetwork {
-    fn from(value: &StatelessNeuralNetwork) -> Self {
+impl From<&NeuralNetworkTopology> for NeuralNetwork {
+    fn from(value: &NeuralNetworkTopology) -> Self {
         let input_layer = value.input_layer
             .iter()
             .map(Neuron::from)
@@ -428,6 +411,10 @@ impl Neuron {
         }
     }
 
+    pub fn sigmoid(&mut self) {
+        self.state.value = 1. / (1. + std::f32::consts::E.powf(-self.state.value));
+    }
+
     /// Flush the neuron's state. Called by [NeuralNetwork::flush_state]
     pub fn flush_state(&mut self) {
         self.state.value = self.bias;
@@ -456,17 +443,6 @@ pub struct NeuronState {
 
     /// Whether or not the neuron has been processed already. Used for caching in the recursive algo.
     pub processed: bool,
-}
-
-impl GenerateRandom for NetworkWideMutation {
-    fn gen_random(rng: &mut impl Rng) -> Self {
-        match rng.gen_range(0..3) {
-            0 => Self::AddConnection,
-            1 => Self::RemoveConnection,
-            2 => Self::AddNeuron,
-            _ => Self::RemoveNeuron,
-        }
-    }
 }
 
 #[cfg(test)]
