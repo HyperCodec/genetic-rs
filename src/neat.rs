@@ -1,11 +1,12 @@
+use std::{cell::{Ref, RefCell, RefMut}, rc::Rc};
+
 use crate::prelude::*;
-use std::{borrow::Borrow, rc::Rc};
 
 #[derive(Clone)]
 pub struct StatelessNeuralNetwork {
-    input_layer: Vec<Rc<StatelessNeuron>>,
-    hidden_layers: Vec<Rc<StatelessNeuron>>,
-    output_layer: Vec<Rc<StatelessNeuron>>,
+    input_layer: Vec<StatelessNeuron>,
+    hidden_layers: Vec<StatelessNeuron>,
+    output_layer: Vec<StatelessNeuron>,
 }
 
 impl StatelessNeuralNetwork {
@@ -13,15 +14,15 @@ impl StatelessNeuralNetwork {
         let mut rng = rand::thread_rng();
 
         let input_layer: Vec<_> = (0..inputs)
-            .map(|i| Rc::new(StatelessNeuron::new(vec![], NeuronLocator::Input(i), &mut rng)))
+            .map(|i| StatelessNeuron::new(vec![], NeuronPointer::Input(i), &mut rng))
             .collect();
 
         let hidden_layers: Vec<_> = (0..hidden)
-            .map(|i| Rc::new(StatelessNeuron::new(input_layer.clone(), NeuronLocator::Hidden(i), &mut rng)))
+            .map(|i| StatelessNeuron::new((0..inputs).map(|i| NeuronPointer::Input(i)), NeuronPointer::Hidden(i), &mut rng))
             .collect();
 
         let output_layer: Vec<_> = (0..outputs)
-            .map(|i| Rc::new(StatelessNeuron::new(hidden_layers.clone(), NeuronLocator::Output(i), &mut rng)))
+            .map(|i| StatelessNeuron::new((0..hidden).map(|i| NeuronPointer::Hidden(i)), NeuronPointer::Output(i), &mut rng))
             .collect();
 
         Self {
@@ -31,36 +32,87 @@ impl StatelessNeuralNetwork {
         }
     }
 
-    fn rand_neuron_mut(&mut self, rng: &mut impl rand::Rng) -> (&mut Rc<StatelessNeuron>, NeuronLocator) {
+    fn get_neuron(&self, ptr: NeuronPointer) -> &StatelessNeuron {
+        match ptr {
+            NeuronPointer::Input(i) => &self.input_layer[i],
+            NeuronPointer::Hidden(i) => &self.hidden_layers[i],
+            NeuronPointer::Output(i) => &self.output_layer[i],
+        }
+    }
+
+    fn get_neuron_mut(&mut self, ptr: NeuronPointer) -> &mut StatelessNeuron {
+        match ptr {
+            NeuronPointer::Input(i) => &mut self.input_layer[i],
+            NeuronPointer::Hidden(i) => &mut self.hidden_layers[i],
+            NeuronPointer::Output(i) => &mut self.output_layer[i],
+        }
+    }
+
+    fn rand_neuron_mut(&mut self, rng: &mut impl rand::Rng) -> (&mut StatelessNeuron, NeuronPointer) {
         if rng.gen::<f32>() <= 0.5 {
             let i = rng.gen_range(0..self.output_layer.len());
-            return (&mut self.output_layer[i], NeuronLocator::Output(i));
+            return (&mut self.output_layer[i], NeuronPointer::Output(i));
         }
 
         let i = rng.gen_range(0..self.hidden_layers.len());
-        (&mut self.hidden_layers[i], NeuronLocator::Hidden(i))
+        (&mut self.hidden_layers[i], NeuronPointer::Hidden(i))
     }
 
 
-    fn rand_neuron(&self, rng: &mut impl rand::Rng) -> (&Rc<StatelessNeuron>, NeuronLocator) {
+    fn rand_neuron(&self, rng: &mut impl rand::Rng) -> (&StatelessNeuron, NeuronPointer) {
         if rng.gen::<f32>() <= 0.5 {
             let i = rng.gen_range(0..self.output_layer.len());
-            return (&self.output_layer[i], NeuronLocator::Output(i));
+            return (&self.output_layer[i], NeuronPointer::Output(i));
         }
 
         let i = rng.gen_range(0..self.hidden_layers.len());
-        (&self.hidden_layers[i], NeuronLocator::Hidden(i))
+        (&self.hidden_layers[i], NeuronPointer::Hidden(i))
     }
 
-    fn is_connection_safe(&self, n1: &Rc<StatelessNeuron>, n2: &Rc<StatelessNeuron>) -> bool {
+    fn is_connection_safe(&self, p1: NeuronPointer, p2: NeuronPointer) -> bool {
         // check if connection is safe (going n2 -> n1 if represented by forward propagation).
-        for (n, _w) in &n2.inputs {
-            if n == n1 || !self.is_connection_safe(n1, n) {
+        let n2 = self.get_neuron(p2);
+        for (p, _w) in &n2.inputs {
+            if *p == p1 || !self.is_connection_safe(p1, *p) {
                 return false; // if returned, instantly escape entire recursion.
             }
         }
 
         true // only returned once it reaches input layer (or some other neuron with no inputs)
+    }
+
+    fn delete_neuron_raw(&mut self, ptr: NeuronPointer) -> Option<StatelessNeuron> {
+        if let NeuronPointer::Hidden(i) = ptr {
+            let out = self.hidden_layers.remove(i); // still errors if out of bounds
+
+            self.shift_neuron_pointers_for_deletion(ptr);
+
+            return Some(out);
+        }
+
+        None // invalid layer
+    }
+
+    fn shift_neuron_pointers_for_deletion(&mut self, removed_ptr: NeuronPointer) {
+        if let NeuronPointer::Hidden(i) = removed_ptr {
+            for n in &mut self.output_layer {
+                if let NeuronPointer::Hidden(j) = &mut n.location {
+                    if *j >= i {
+                        *j -= 1;
+                    }
+                }
+
+                for (ptr, _w) in &mut n.inputs {
+                    if let NeuronPointer::Hidden(j) = ptr {
+                        if *j < i {
+                            continue;
+                        }
+
+                        *j -= 1;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -76,47 +128,52 @@ impl RandomlyMutable for StatelessNeuralNetwork {
                 let (mut n2, mut loc2) = self.rand_neuron(rng);
 
                 // search for valid neuron pair
-                while !self.is_connection_safe(n1, n2) {
+                while !self.is_connection_safe(loc1, loc2) {
                     (n1, loc1) = self.rand_neuron(rng);
                     (n2, loc2) = self.rand_neuron(rng);
                 }
 
-                let n2 = match loc2 {
-                    NeuronLocator::Input(i) => self.input_layer[i].clone(),
-                    NeuronLocator::Hidden(i) => self.hidden_layers[i].clone(),
-                    NeuronLocator::Output(i) => self.output_layer[i].clone(),
-                };
+                let n1 = self.get_neuron_mut(loc1);
 
-                let n1 = match loc1 {
-                    NeuronLocator::Input(i) => Rc::get_mut(&mut self.input_layer[i]).unwrap(),
-                    NeuronLocator::Hidden(i) => Rc::get_mut(&mut self.hidden_layers[i]).unwrap(),
-                    NeuronLocator::Output(i) => Rc::get_mut(&mut self.output_layer[i]).unwrap(),
-                };
-
-                n1.inputs.push((n2, rng.gen::<f32>()));
+                n1.inputs.push((loc2, rng.gen::<f32>()));
             },
             NetworkWideMutation::RemoveConnection => {
-                let n = Rc::get_mut(self.rand_neuron_mut(rng).0).unwrap();
+                let n = self.rand_neuron_mut(rng).0;
                 n.inputs.remove(rng.gen_range(0..n.inputs.len()));
             },
             NetworkWideMutation::AddNeuron => {
                 // split preexisting connection to put new neuron in.
-                let n = Rc::get_mut(self.rand_neuron_mut(rng).0).unwrap();
+                let (pn, i, n2, w);
+                
+                {
+                    let npn = self.rand_neuron_mut(rng);
+                    let n = npn.0;
+                    pn = npn.1;
 
-                let i = rng.gen_range(0..n.inputs.len());
-                let (n2, w) = n.inputs.remove(i);
-                let n3 = Rc::new(StatelessNeuron::new(vec![n2], NeuronLocator::Input(i), rng));
+                    i = rng.gen_range(0..n.inputs.len());
+                    (n2, w) = n.inputs.remove(i);
+                    
+                }
+                
+                let n3 = StatelessNeuron::new(vec![n2], NeuronPointer::Input(i), rng);
+                let loc = NeuronPointer::Hidden(self.hidden_layers.len());
+                self.hidden_layers.push(n3);
 
-                n.inputs.push((n3, w));
+
+                let n = self.get_neuron_mut(pn);
+
+                n.inputs.push((loc, w));
             },
             NetworkWideMutation::RemoveNeuron => {
-                self.hidden_layers.remove(rng.gen_range(0..self.hidden_layers.len()));
+                let i = rng.gen_range(0..self.hidden_layers.len());
+                let ptr = NeuronPointer::Hidden(i);
+                self.delete_neuron_raw(ptr);
             },
         }
 
-        // change weights anyway
+        // change weights
         for n in self.hidden_layers.iter_mut() {
-            for (_n, w) in Rc::get_mut(n).unwrap().inputs.iter_mut() {
+            for (_n2, w) in n.inputs.iter_mut() {
                 if rng.gen::<f32>() < rate {
                     *w += rng.gen::<f32>() * rate;
                 }
@@ -124,7 +181,7 @@ impl RandomlyMutable for StatelessNeuralNetwork {
         }
 
         for n in self.output_layer.iter_mut() {
-            for (_n, w) in Rc::get_mut(n).unwrap().inputs.iter_mut() {
+            for (_n2, w) in n.inputs.iter_mut() {
                 if rng.gen::<f32>() < rate {
                     *w += rng.gen::<f32>() * rate;
                 }
@@ -158,13 +215,13 @@ pub enum NetworkWideMutation {
 
 #[derive(Clone, PartialEq)]
 pub struct StatelessNeuron {
-    inputs: Vec<(Rc<StatelessNeuron>, f32)>,
+    inputs: Vec<(NeuronPointer, f32)>,
     bias: f32,
-    location: NeuronLocator,
+    location: NeuronPointer,
 }
 
 impl StatelessNeuron {
-    pub fn new(inputs: Vec<Rc<StatelessNeuron>>, location: NeuronLocator, rng: &mut impl rand::Rng) -> Self {
+    pub fn new(inputs: impl IntoIterator<Item = NeuronPointer>, location: NeuronPointer, rng: &mut impl rand::Rng) -> Self {
         let inputs = inputs
             .into_iter()
             .map(|r| (r, rng.gen::<f32>()))
@@ -180,20 +237,43 @@ impl StatelessNeuron {
     }
 }
 
-#[derive(Clone, PartialEq)]
-enum NeuronLocator {
+#[derive(Clone, Copy, PartialEq)]
+pub enum NeuronPointer {
     Input(usize),
     Hidden(usize),
     Output(usize),
+}
+
+impl NeuronPointer {
+    pub fn is_input(&self) -> bool {
+        match self {
+            Self::Input(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_hidden(&self) -> bool {
+        match self {
+            Self::Hidden(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_output(&self) -> bool {
+        match self {
+            Self::Output(_) => true,
+            _ => false,
+        }
+    }
 }
 
 /// A builtin struct that uses the NEAT (Neuro-Evolution Augmented Topology) algorithm.
 /// TODO example
 #[derive(Clone)]
 pub struct NeuralNetwork {
-    input_layer: Vec<Rc<Neuron>>,
-    hidden_layers: Vec<Rc<Neuron>>,
-    output_layer: Vec<Rc<Neuron>>,
+    input_layer: Vec<Rc<RefCell<Neuron>>>,
+    hidden_layers: Vec<Rc<RefCell<Neuron>>>,
+    output_layer: Vec<Rc<RefCell<Neuron>>>,
 }
 
 impl NeuralNetwork {
@@ -202,15 +282,15 @@ impl NeuralNetwork {
         let mut rng = rand::thread_rng();
 
         let input_layer: Vec<_> = (0..inputs)
-            .map(|_| Rc::new(Neuron::new(vec![], &mut rng)))
+            .map(|_| Rc::new(RefCell::new(Neuron::new(vec![], &mut rng))))
             .collect();
 
         let hidden_layers: Vec<_> = (0..hidden)
-            .map(|_| Rc::new(Neuron::new(input_layer.clone(), &mut rng)))
+            .map(|_| Rc::new(RefCell::new(Neuron::new((0..inputs).map(|i| NeuronPointer::Input(i)), &mut rng))))
             .collect();
 
         let output_layer: Vec<_> = (0..outputs)
-            .map(|_| Rc::new(Neuron::new(hidden_layers.clone(), &mut rng)))
+            .map(|_| Rc::new(RefCell::new(Neuron::new((0..hidden).map(|i| NeuronPointer::Hidden(i)), &mut rng))))
             .collect();
 
         Self {
@@ -229,87 +309,87 @@ impl NeuralNetwork {
         }
 
         for (i, v) in inputs.into_iter().enumerate() {
-            let n = Rc::get_mut(&mut self.input_layer[i]).unwrap();
+            let mut n = self.input_layer[i].borrow_mut();
             n.state.value = v;
             n.state.processed = true;
         }
 
-        self.output_layer
-            .iter_mut()
-            .map(|n| Rc::get_mut(n).unwrap().process())
-            .collect()
+        let mut outputs = Vec::with_capacity(self.output_layer.len());
+        for i in 0..self.output_layer.len() {
+            let nrc = Rc::clone(&self.output_layer[i]);
+            let mut n = nrc.borrow_mut();
+            let mut work = n.inputs.clone();
+
+            while let Some((ptr, w)) = work.pop() {
+                let n2 = self.get_neuron_mut(ptr);
+
+                if n2.state.processed {
+                    n.state.value += n2.state.value * w;
+                }
+            }
+
+            n.state.processed = true;
+
+            outputs.push(n.state.value);
+        }
+
+        outputs
     }
 
     /// Flushes the neural network state after a call to [predict][NeuralNetwork::predict].
     pub fn flush_state(&mut self) {
-        for n in self.input_layer.iter_mut() {
-            Rc::get_mut(n).unwrap().flush_state();
+        for n in &self.input_layer {
+            n.borrow_mut().flush_state();
         }
 
-        for n in self.hidden_layers.iter_mut() {
-            Rc::get_mut(n).unwrap().flush_state();
+        for n in &self.hidden_layers {
+            n.borrow_mut().flush_state();
         }
 
-        for n in self.output_layer.iter_mut() {
-            Rc::get_mut(n).unwrap().flush_state();
+        for n in &self.output_layer {
+            n.borrow_mut().flush_state();
+        }
+    }
+
+    fn get_neuron(&self, ptr: NeuronPointer) -> Ref<Neuron> {
+        match ptr {
+            NeuronPointer::Input(i) => self.input_layer[i].borrow(),
+            NeuronPointer::Hidden(i) => self.hidden_layers[i].borrow(),
+            NeuronPointer::Output(i) => self.output_layer[i].borrow(),
+        }
+    }
+
+    fn get_neuron_mut(&mut self, ptr: NeuronPointer) -> RefMut<Neuron> {
+        match ptr {
+            NeuronPointer::Input(i) => self.input_layer[i].borrow_mut(),
+            NeuronPointer::Hidden(i) => self.hidden_layers[i].borrow_mut(),
+            NeuronPointer::Output(i) => self.output_layer[i].borrow_mut(),
         }
     }
 }
 
 impl From<&StatelessNeuralNetwork> for NeuralNetwork {
     fn from(value: &StatelessNeuralNetwork) -> Self {
-        let input_layer: Vec<_> = value.input_layer
+        let input_layer = value.input_layer
             .iter()
-            .map(|n| Rc::new(Neuron {
-                inputs: vec![],
-                bias: n.bias,
-                state: NeuronState::default(),
-            }))
+            .map(Neuron::from)
+            .map(RefCell::new)
+            .map(Rc::new)
             .collect();
 
-        let mut hidden_layers: Vec<Rc<Neuron>> = Vec::with_capacity(value.hidden_layers.len());
+        let hidden_layers = value.hidden_layers
+            .iter()
+            .map(Neuron::from)
+            .map(RefCell::new)
+            .map(Rc::new)
+            .collect();
 
-        for n in &value.hidden_layers {
-            let inputs = n.inputs
-                .iter()
-                .map(|(n2, w)| match n2.location {
-                    NeuronLocator::Input(i) => (input_layer[i].clone(), *w),
-                    NeuronLocator::Hidden(i) => (hidden_layers[i].clone(), *w), // TODO fix index errors for neurons that are already loaded. maybe recursive algo?
-                    NeuronLocator::Output(_) => panic!("Output layer should never be the input to a neuron"),
-                })
-                .collect();
-
-            hidden_layers.push(Rc::new(Neuron {
-                inputs,
-                bias: n.bias,
-                state: NeuronState {
-                    value: n.bias,
-                    ..Default::default()
-                }
-            }));
-        }
-
-        let mut output_layer = Vec::with_capacity(value.output_layer.len());
-
-        for n in &value.output_layer {
-            let inputs = n.inputs
-                .iter()
-                .map(|(n2, w)| match n2.location {
-                    NeuronLocator::Input(i) => (input_layer[i].clone(), *w),
-                    NeuronLocator::Hidden(i) => (hidden_layers[i].clone(), *w),
-                    NeuronLocator::Output(_) => panic!("Output layer should never be the input to a neuron"),
-                })
-                .collect();
-
-            output_layer.push(Rc::new(Neuron {
-                inputs,
-                bias: n.bias,
-                state: NeuronState {
-                    value: n.bias,
-                    ..Default::default()
-                }
-            }));
-        }
+        let output_layer = value.output_layer
+            .iter()
+            .map(Neuron::from)
+            .map(RefCell::new)
+            .map(Rc::new)
+            .collect();
 
         Self {
             input_layer,
@@ -322,7 +402,7 @@ impl From<&StatelessNeuralNetwork> for NeuralNetwork {
 /// A neuron in the [NeuralNetwork] struct. Holds connections to previous layers and state.
 #[derive(Clone, PartialEq)]
 pub struct Neuron {
-    inputs: Vec<(Rc<Neuron>, f32)>,
+    inputs: Vec<(NeuronPointer, f32)>,
     bias: f32,
 
     /// The state of the neuron. Used in [NeuralNetwork::predict]
@@ -331,7 +411,7 @@ pub struct Neuron {
 
 impl Neuron {
     /// Create a new neuron based on the preceding layer.
-    pub fn new(inputs: Vec<Rc<Neuron>>, rng: &mut impl rand::Rng) -> Self {
+    pub fn new(inputs: impl IntoIterator<Item = NeuronPointer>, rng: &mut impl rand::Rng) -> Self {
         let inputs = inputs
             .into_iter()
             .map(|r| (r, rng.gen::<f32>()))
@@ -349,25 +429,23 @@ impl Neuron {
         }
     }
 
-    /// Recursively solve the value of this neuron and its predecessors.
-    pub fn process(&mut self) -> f32 {
-        if self.state.processed {
-            return self.state.value;
-        }
-
-        for (n, w) in self.inputs.iter_mut() {
-            self.state.value += Rc::get_mut(n).unwrap().process() * *w;
-        }
-
-        self.state.processed = true;
-
-        self.state.value
-    }
-
     /// Flush the neuron's state. Called by [NeuralNetwork::flush_state]
     pub fn flush_state(&mut self) {
         self.state.value = self.bias;
         self.state.processed = false;
+    }
+}
+
+impl From<&StatelessNeuron> for Neuron {
+    fn from(value: &StatelessNeuron) -> Self {
+        Self {
+            inputs: value.inputs.clone(),
+            bias: value.bias,
+            state: NeuronState {
+                value: value.bias,
+                ..Default::default()
+            }
+        }
     }
 }
 
