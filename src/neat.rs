@@ -71,6 +71,11 @@ impl StatelessNeuralNetwork {
 
     fn is_connection_safe(&self, p1: NeuronPointer, p2: NeuronPointer) -> bool {
         // check if connection is safe (going n2 -> n1 if represented by forward propagation).
+
+        if let NeuronPointer::Output(_) = p2 {
+            return false;
+        }
+
         let n2 = self.get_neuron(p2);
         for (p, _w) in &n2.inputs {
             if *p == p1 || !self.is_connection_safe(p1, *p) {
@@ -321,8 +326,8 @@ impl NeuralNetwork {
             let mut work = n.inputs.clone();
 
             while let Some((ptr, w)) = work.pop() {
-                let n2m = self.get_neuron(ptr);
-                let n2 = n2m.try_lock().unwrap(); // cause of hang
+                let n2rc = self.get_neuron(ptr);
+                let n2 = n2rc.try_lock().unwrap(); // cause of hang
 
                 if n2.state.processed {
                     n.state.value += n2.state.value * w;
