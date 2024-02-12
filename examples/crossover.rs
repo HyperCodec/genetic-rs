@@ -2,17 +2,17 @@ use genetic_rs::prelude::*;
 use rand::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
-struct MyEntity {
+struct MyGenome {
     val: f32,
 }
 
-impl RandomlyMutable for MyEntity {
+impl RandomlyMutable for MyGenome {
     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
         self.val += rng.gen::<f32>() * rate;
     }
 }
 
-impl CrossoverReproduction for MyEntity {
+impl CrossoverReproduction for MyGenome {
     fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
         let mut child = Self {
             val: (self.val + other.val) / 2.,
@@ -22,9 +22,9 @@ impl CrossoverReproduction for MyEntity {
     }
 }
 
-impl Prunable for MyEntity {}
+impl Prunable for MyGenome {}
 
-impl GenerateRandom for MyEntity {
+impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl Rng) -> Self {
         Self {
             val: rng.gen::<f32>() * 1000.,
@@ -36,7 +36,7 @@ fn main() {
     let mut rng = rand::thread_rng();
 
     let magic_number = rng.gen::<f32>() * 1000.;
-    let fitness = move |e: &MyEntity| -> f32 { -(magic_number - e.val).abs() };
+    let fitness = move |e: &MyGenome| -> f32 { -(magic_number - e.val).abs() };
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
@@ -48,5 +48,5 @@ fn main() {
         sim.next_generation();
     }
 
-    dbg!(sim.entities, magic_number);
+    dbg!(sim.genomes, magic_number);
 }
