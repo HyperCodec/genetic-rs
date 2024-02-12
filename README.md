@@ -26,7 +26,7 @@ impl RandomlyMutable for MyGenome {
 
 // required for `division_pruning_nextgen`.
 impl DivsionReproduction for MyGenome {
-    fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
+    fn divide(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
         child

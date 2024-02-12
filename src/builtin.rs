@@ -52,7 +52,7 @@ pub mod next_gen {
     }
 
     /// When making a new generation, it despawns half of the genomes and then spawns children from the remaining to reproduce.
-    /// WIP: const generic for mutation rate, will allow for [DivisionReproduction::spawn_child] to accept a custom mutation rate. Delayed due to current Rust limitations
+    /// WIP: const generic for mutation rate, will allow for [DivisionReproduction::divide] to accept a custom mutation rate. Delayed due to current Rust limitations
     #[cfg(not(feature = "rayon"))]
     pub fn division_pruning_nextgen<E: DivisionReproduction + Prunable + Clone>(
         rewards: Vec<(E, f32)>,
@@ -94,7 +94,7 @@ pub mod next_gen {
         while next_gen.len() < population_size {
             let e = og_champions.next().unwrap();
 
-            next_gen.push(e.spawn_child(&mut rng));
+            next_gen.push(e.divide(&mut rng));
         }
 
         next_gen
@@ -123,7 +123,7 @@ pub mod next_gen {
                 continue;
             }
 
-            next_gen.push(e1.spawn_child(e2, &mut rng));
+            next_gen.push(e1.crossover(e2, &mut rng));
         }
 
         next_gen
@@ -247,7 +247,7 @@ mod tests {
 
     #[cfg(feature = "crossover")]
     impl CrossoverReproduction for MyCrossoverGenome {
-        fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+        fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
             let mut child = Self(MyGenome((self.0 .0 + other.0 .0) / 2.));
             child.mutate(0.25, rng);
             child
