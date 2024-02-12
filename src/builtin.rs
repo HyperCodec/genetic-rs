@@ -1,6 +1,6 @@
-/// Used in all of the builtin [next_gen]s to randomly mutate entities a given amount
+/// Used in all of the builtin [next_gen]s to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
-    /// Mutate the entity with a given mutation rate (0..1)
+    /// Mutate the genome with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng);
 }
 
@@ -14,14 +14,14 @@ pub trait DivisionReproduction: RandomlyMutable {
 /// Used in crossover-reproducing [next_gen]s
 #[cfg(feature = "crossover")]
 pub trait CrossoverReproduction: RandomlyMutable {
-    /// Use crossover reproduction to create a new entity.
+    /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Used in pruning [next_gen]s
 pub trait Prunable: Sized {
     /// This does any unfinished work in the despawning process.
-    /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn an entity.
+    /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn a genome.
     fn despawn(self) {}
 }
 
@@ -33,7 +33,7 @@ pub mod next_gen {
     #[cfg(feature = "rayon")]
     use rayon::prelude::*;
 
-    /// When making a new generation, it mutates each entity a certain amount depending on their reward.
+    /// When making a new generation, it mutates each genome a certain amount depending on their reward.
     /// This nextgen is very situational and should not be your first choice.
     pub fn scrambling_nextgen<E: RandomlyMutable>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
@@ -51,7 +51,7 @@ pub mod next_gen {
             .collect()
     }
 
-    /// When making a new generation, it despawns half of the entities and then spawns children from the remaining to reproduce.
+    /// When making a new generation, it despawns half of the genomes and then spawns children from the remaining to reproduce.
     /// WIP: const generic for mutation rate, will allow for [DivisionReproduction::spawn_child] to accept a custom mutation rate. Delayed due to current Rust limitations
     #[cfg(not(feature = "rayon"))]
     pub fn division_pruning_nextgen<E: DivisionReproduction + Prunable + Clone>(
@@ -100,7 +100,7 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Prunes half of the entities and randomly breeds the remaining ones.
+    /// Prunes half of the genomes and randomly crosses over the remaining ones.
     #[cfg(all(feature = "crossover", not(feature = "rayon")))]
     pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + PartialEq>(
         rewards: Vec<(E, f32)>,
@@ -206,15 +206,15 @@ mod tests {
     use crate::prelude::*;
 
     #[derive(Default, Clone, Debug, PartialEq)]
-    struct MyEntity(f32);
+    struct MyGenome(f32);
 
-    impl RandomlyMutable for MyEntity {
+    impl RandomlyMutable for MyGenome {
         fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
             self.0 += rng.gen::<f32>() * rate;
         }
     }
 
-    impl DivisionReproduction for MyEntity {
+    impl DivisionReproduction for MyGenome {
         fn divide(&self, rng: &mut impl rand::Rng) -> Self {
             let mut child = self.clone();
             child.mutate(0.25, rng);
@@ -222,13 +222,13 @@ mod tests {
         }
     }
 
-    impl Prunable for MyEntity {
+    impl Prunable for MyGenome {
         fn despawn(self) {
             println!("RIP {:?}", self);
         }
     }
 
-    impl GenerateRandom for MyEntity {
+    impl GenerateRandom for MyGenome {
         fn gen_random(rng: &mut impl Rng) -> Self {
             Self(rng.gen())
         }
@@ -236,42 +236,42 @@ mod tests {
 
     #[cfg(feature = "crossover")]
     #[derive(Debug, Clone, PartialEq)]
-    struct MyCrossoverEntity(MyEntity);
+    struct MyCrossoverGenome(MyGenome);
 
     #[cfg(feature = "crossover")]
-    impl RandomlyMutable for MyCrossoverEntity {
+    impl RandomlyMutable for MyCrossoverGenome {
         fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
             self.0.mutate(rate, rng);
         }
     }
 
     #[cfg(feature = "crossover")]
-    impl CrossoverReproduction for MyCrossoverEntity {
+    impl CrossoverReproduction for MyCrossoverGenome {
         fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
-            let mut child = Self(MyEntity((self.0 .0 + other.0 .0) / 2.));
+            let mut child = Self(MyGenome((self.0 .0 + other.0 .0) / 2.));
             child.mutate(0.25, rng);
             child
         }
     }
 
     #[cfg(feature = "crossover")]
-    impl Prunable for MyCrossoverEntity {}
+    impl Prunable for MyCrossoverGenome {}
 
     #[cfg(feature = "crossover")]
-    impl GenerateRandom for MyCrossoverEntity {
+    impl GenerateRandom for MyCrossoverGenome {
         fn gen_random(rng: &mut impl rand::Rng) -> Self {
-            Self(MyEntity::gen_random(rng))
+            Self(MyGenome::gen_random(rng))
         }
     }
 
     const MAGIC_NUMBER: f32 = std::f32::consts::E;
 
-    fn my_fitness_fn(ent: &MyEntity) -> f32 {
+    fn my_fitness_fn(ent: &MyGenome) -> f32 {
         (MAGIC_NUMBER - ent.0).abs() * -1.
     }
 
     #[cfg(feature = "crossover")]
-    fn my_crossover_fitness_fn(ent: &MyCrossoverEntity) -> f32 {
+    fn my_crossover_fitness_fn(ent: &MyCrossoverGenome) -> f32 {
         (MAGIC_NUMBER - ent.0 .0).abs() * -1.
     }
 
@@ -289,7 +289,7 @@ mod tests {
             sim.next_generation();
         }
 
-        dbg!(sim.entities);
+        dbg!(sim.genomes);
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -306,7 +306,7 @@ mod tests {
             sim.next_generation();
         }
 
-        dbg!(sim.entities);
+        dbg!(sim.genomes);
     }
 
     #[cfg(all(feature = "crossover", not(feature = "rayon")))]
@@ -324,6 +324,6 @@ mod tests {
             sim.next_generation();
         }
 
-        dbg!(sim.entities);
+        dbg!(sim.genomes);
     }
 }

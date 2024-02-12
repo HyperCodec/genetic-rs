@@ -9,23 +9,23 @@ A small crate for quickstarting genetic algorithm projects
 ### How to Use
 First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature. If you want it to be parallelized, you can add the `rayon` feature.
 
-Once you have eveything imported as you wish, you can define your entity and impl the required traits:
+Once you have eveything imported as you wish, you can define your genome and impl the required traits:
 
 ```rust
 #[derive(Clone, Debug)] // clone is currently a required derive for pruning nextgens.
-struct MyEntity {
+struct MyGenome {
     field1: f32,
 }
 
 // required in all of the builtin functions as requirements of `DivsionReproduction` and `CrossoverReproduction`
-impl RandomlyMutable for MyEntity {
+impl RandomlyMutable for MyGenome {
     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
         self.field1 += rng.gen::<f32>() * rate;
     }
 }
 
 // required for `division_pruning_nextgen`.
-impl DivsionReproduction for MyEntity {
+impl DivsionReproduction for MyGenome {
     fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
@@ -34,15 +34,15 @@ impl DivsionReproduction for MyEntity {
 }
 
 // required for the builtin pruning algorithms.
-impl Prunable for MyEntity {
+impl Prunable for MyGenome {
     fn despawn(self) {
-        // unneccessary to implement this function, but it can be useful for debugging and cleaning up entities.
+        // unneccessary to implement this function, but it can be useful for debugging and cleaning up genomes.
         println!("{:?} died", self);
     }
 }
 
 // helper trait that allows us to use `Vec::gen_random` for the initial population.
-impl GenerateRandom for MyEntity {
+impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl rand::Rng) -> Self {
         Self { field1: rng.gen() }
     }
@@ -51,7 +51,7 @@ impl GenerateRandom for MyEntity {
 
 Once you have a struct, you must create your fitness function:
 ```rust
-fn my_fitness_fn(ent: &MyEntity) -> f32 {
+fn my_fitness_fn(ent: &MyGenome) -> f32 {
     // this just means that the algorithm will try to create as big a number as possible due to fitness being directly taken from the field.
     // in a more complex genetic algorithm, you will want to utilize `ent` to test them and generate a reward.
     ent.field1
@@ -75,10 +75,10 @@ fn main() {
  
     // perform evolution (100 gens)
     for _ in 0..100 {
-        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.entities` in between these calls
+        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.genomes` in between these calls
     }
  
-    dbg!(sim.entities);
+    dbg!(sim.genomes);
 }
 ```
 
