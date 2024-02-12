@@ -29,11 +29,9 @@ pub trait Prunable: Sized {
 pub mod next_gen {
     use super::*;
 
-    use rand::{rngs::StdRng, SeedableRng};
     #[cfg(feature = "rayon")]
     use rayon::prelude::*;
 
-    #[cfg(feature = "crossover")]
     use rand::prelude::*;
 
     /// When making a new generation, it mutates each genome a certain amount depending on their reward.
