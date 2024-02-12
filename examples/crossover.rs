@@ -13,7 +13,7 @@ impl RandomlyMutable for MyEntity {
 }
 
 impl CrossoverReproduction for MyEntity {
-    fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+    fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
         let mut child = Self {
             val: (self.val + other.val) / 2.,
         };

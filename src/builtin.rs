@@ -8,14 +8,14 @@ pub trait RandomlyMutable {
 pub trait DivisionReproduction: RandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
-    fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self;
+    fn divide(&self, rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Used in crossover-reproducing [next_gen]s
 #[cfg(feature = "crossover")]
 pub trait CrossoverReproduction: RandomlyMutable {
     /// Use crossover reproduction to create a new entity.
-    fn spawn_child(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
+    fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Used in pruning [next_gen]s
@@ -28,7 +28,6 @@ pub trait Prunable: Sized {
 /// Contains functions used in [GeneticSim][crate::GeneticSim].
 pub mod next_gen {
     use super::*;
-    use rand::prelude::*;
 
     use rand::{rngs::StdRng, SeedableRng};
     #[cfg(feature = "rayon")]
@@ -71,7 +70,7 @@ pub mod next_gen {
         while next_gen.len() < population_size {
             let e = og_champions.next().unwrap();
 
-            next_gen.push(e.spawn_child(&mut rng));
+            next_gen.push(e.divide(&mut rng));
         }
 
         next_gen
@@ -155,7 +154,7 @@ pub mod next_gen {
                 continue;
             }
 
-            next_gen.push(e1.spawn_child(e2, &mut rng));
+            next_gen.push(e1.crossover(e2, &mut rng));
         }
 
         next_gen
@@ -216,7 +215,7 @@ mod tests {
     }
 
     impl DivisionReproduction for MyEntity {
-        fn spawn_child(&self, rng: &mut impl rand::Rng) -> Self {
+        fn divide(&self, rng: &mut impl rand::Rng) -> Self {
             let mut child = self.clone();
             child.mutate(0.25, rng);
             child
