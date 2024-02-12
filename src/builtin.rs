@@ -5,7 +5,7 @@ pub trait RandomlyMutable {
 }
 
 /// Used in dividually-reproducing [next_gen]s
-pub trait DivisionReproduction: RandomlyMutable {
+pub trait DivisionReproduction {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn divide(&self, rng: &mut impl rand::Rng) -> Self;
