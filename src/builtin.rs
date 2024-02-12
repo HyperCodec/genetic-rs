@@ -33,6 +33,9 @@ pub mod next_gen {
     #[cfg(feature = "rayon")]
     use rayon::prelude::*;
 
+    #[cfg(feature = "crossover")]
+    use rand::prelude::*;
+
     /// When making a new generation, it mutates each genome a certain amount depending on their reward.
     /// This nextgen is very situational and should not be your first choice.
     pub fn scrambling_nextgen<E: RandomlyMutable>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
