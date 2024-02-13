@@ -234,7 +234,7 @@ pub mod next_gen {
         E: CrossoverReproduction + Speciated + DivisionReproduction,
     >(
         genome: &E,
-        genomes: &Vec<E>,
+        genomes: &[E],
         rng: &mut impl Rng,
     ) -> E {
         let same_species = genome.filter_same_species(genomes);
