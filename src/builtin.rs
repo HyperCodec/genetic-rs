@@ -25,11 +25,14 @@ pub trait Prunable: Sized {
     fn despawn(self) {}
 }
 
+/// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too dissimilar.
 #[cfg(feature = "speciation")]
 pub trait Speciated: Sized
 {
+    /// Calculates whether two genomes are similar enough to be considered part of the same species.
     fn is_same_species(&self, other: &Self) -> bool;
 
+    /// Filters a list of genomes based on whether they are of the same species.
     fn filter_same_species<'a>(&'a self, genomes: &'a Vec<Self>) -> Vec<&Self> {
         genomes
             .iter()
@@ -174,12 +177,14 @@ pub mod next_gen {
         next_gen
     }
 
+    /// Similar to [crossover_pruning_nextgen], this nextgen will prune and then perform crossover reproduction. 
+    /// With this function, crossover reproduction will only occur if both genomes are of the same species, otherwise one will perform divison to reproduce.
     #[cfg(all(feature = "speciation", not(feature = "rayon")))]
     pub fn speciated_crossover_pruning_nextgen<
         'a,
         G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + PartialEq,
     >(
-        mut rewards: Vec<(G, f32)>,
+        rewards: Vec<(G, f32)>,
     ) -> Vec<G> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
@@ -199,6 +204,7 @@ pub mod next_gen {
         next_gen
     }
 
+    /// Rayon version of [speciated_crossover_pruning_nextgen]
     #[cfg(all(feature = "speciation", feature = "rayon"))]
     pub fn speciated_crossover_pruning_nextgen<
         'a,
