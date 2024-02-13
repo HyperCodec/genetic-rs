@@ -354,6 +354,20 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "speciation")]
+    impl DivisionReproduction for MyCrossoverGenome {
+        fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+            Self(self.0.divide(rng))
+        }
+    }
+
+    #[cfg(feature = "speciation")]
+    impl Speciated for MyCrossoverGenome {
+        fn is_same_species(&self, other: &Self) -> bool {
+            (self.0.0 - other.0.0).abs() <= 2.
+        }
+    }
+
     const MAGIC_NUMBER: f32 = std::f32::consts::E;
 
     fn my_fitness_fn(ent: &MyGenome) -> f32 {
@@ -371,6 +385,21 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 1000),
+            my_fitness_fn,
+            scrambling_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.genomes);
+    }
+
+    #[cfg(feature = "rayon")]
+    fn r_scramble() {
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(1000),
             my_fitness_fn,
             scrambling_nextgen,
         );
@@ -408,6 +437,56 @@ mod tests {
             Vec::gen_random(&mut rng, 100),
             my_crossover_fitness_fn,
             crossover_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.genomes);
+    }
+
+    #[cfg(all(feature = "crossover", feature = "rayon"))]
+    #[test]
+    fn cr_prune() {
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(100),
+            my_crossover_fitness_fn,
+            crossover_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.genomes);
+    }
+
+    #[cfg(all(feature = "speciation", not(feature = "rayon")))]
+    #[test]
+    fn sc_prune() {
+        let mut rng = rand::thread_rng();
+
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(&mut rng, 100),
+            my_crossover_fitness_fn,
+            speciated_crossover_pruning_nextgen,
+        );
+
+        for _ in 0..100 {
+            sim.next_generation();
+        }
+
+        dbg!(sim.genomes);
+    }
+
+    #[cfg(all(feature = "speciation", feature = "rayon"))]
+    #[test]
+    fn scr_prune() {
+        let mut sim = GeneticSim::new(
+            Vec::gen_random(100),
+            my_crossover_fitness_fn,
+            speciated_crossover_pruning_nextgen,
         );
 
         for _ in 0..100 {

@@ -32,6 +32,7 @@ impl GenerateRandom for MyGenome {
     }
 }
 
+#[cfg(not(feature = "rayon"))]
 fn main() {
     let mut rng = rand::thread_rng();
 
@@ -40,6 +41,25 @@ fn main() {
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
+        fitness,
+        crossover_pruning_nextgen,
+    );
+
+    for _ in 0..100 {
+        sim.next_generation();
+    }
+
+    dbg!(sim.genomes, magic_number);
+}
+
+#[cfg(feature = "rayon")]
+fn main() {
+    let mut rng = rand::thread_rng();
+    let magic_number = rng.gen::<f32>() * 1000.;
+    let fitness = move |e: &MyGenome| -> f32 { -(magic_number - e.val).abs() };
+
+    let mut sim = GeneticSim::new(
+        Vec::gen_random(100),
         fitness,
         crossover_pruning_nextgen,
     );
