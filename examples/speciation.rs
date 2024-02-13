@@ -34,7 +34,7 @@ impl CrossoverReproduction for MyGenome {
 
 impl Speciated for MyGenome {
     fn is_same_species(&self, other: &Self) -> bool {
-        // declared same species by being close to matching dist on both values.
+        // declared same species by being close to matching values.
         (self.val1 - other.val1).abs() + (self.val2 - other.val2).abs() <= 5.
     }
 }
@@ -66,6 +66,7 @@ fn main() {
         speciated_crossover_pruning_nextgen,
     );
 
+    // speciation tends to take more generations (not needed to this extent, but the crate is fast enough to where it isn't much of a compromise)
     for _ in 0..1000 {
         sim.next_generation();
     }
