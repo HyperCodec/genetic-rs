@@ -174,10 +174,35 @@ pub mod next_gen {
         next_gen
     }
 
-    #[cfg(feature = "speciation")]
+    #[cfg(all(feature = "speciation", not(feature = "rayon")))]
     pub fn speciated_crossover_pruning_nextgen<
         'a,
         G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + PartialEq,
+    >(
+        mut rewards: Vec<(G, f32)>,
+    ) -> Vec<G> {
+        let population_size = rewards.len();
+        let mut next_gen = pruning_helper(rewards);
+
+        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+
+        // TODO remove clone smh
+        let og_champions = next_gen.clone();
+
+        let mut og_champs_cycle = og_champions.iter().cycle();
+
+        while next_gen.len() < population_size {
+            let g1 = og_champs_cycle.next().unwrap();
+            next_gen.push(species_helper(g1, &og_champions, &mut rng));
+        }
+
+        next_gen
+    }
+
+    #[cfg(all(feature = "speciation", feature = "rayon"))]
+    pub fn speciated_crossover_pruning_nextgen<
+        'a,
+        G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + Send + PartialEq,
     >(
         mut rewards: Vec<(G, f32)>,
     ) -> Vec<G> {
