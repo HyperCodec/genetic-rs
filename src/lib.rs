@@ -4,7 +4,12 @@
 //! A small crate to quickstart genetic algorithm projects
 //!
 //! ### How to Use
-//! First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature.
+//!
+//! ### Features
+//! First off, this crate comes with the `builtin` and `genrand` features by default.
+//! If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature.
+//! If you want it to be parallelized, you can add the `rayon` feature.
+//! If you want your crossover to be speciated, you can add the `speciation` feature.
 //!
 //! Once you have eveything imported as you wish, you can define your genomes and impl the required traits:
 //!
@@ -56,7 +61,7 @@
 //! ```
 //!
 //!
-//! Once you have your fitness function, you can create a `GeneticSim` object to manage and control the evolutionary steps:
+//! Once you have your fitness function, you can create a [`GeneticSim`] object to manage and control the evolutionary steps:
 //!
 //! ```rust, ignore
 //! fn main() {
@@ -171,7 +176,7 @@ where
     next_gen: Box<NextgenFn<E>>,
 }
 
-/// Rayon version of the [GeneticSim] struct
+/// Rayon version of the [`GeneticSim`] struct
 #[cfg(feature = "rayon")]
 pub struct GeneticSim<E>
 where
@@ -188,7 +193,7 @@ impl<E> GeneticSim<E>
 where
     E: Sized,
 {
-    /// Creates a GeneticSim with a given population of `starting_genomes` (the size of which will be retained),
+    /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
     pub fn new(
         starting_genomes: Vec<E>,
@@ -202,7 +207,7 @@ where
         }
     }
 
-    /// Uses the `next_gen` provided in [GeneticSim::new] to create the next generation of genomes.
+    /// Uses the `next_gen` provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         replace_with_or_abort(&mut self.genomes, |genomes| {
@@ -224,7 +229,7 @@ impl<E> GeneticSim<E>
 where
     E: Sized + Send,
 {
-    /// Creates a new GeneticSim using a starting population, fitness function, and nextgen function
+    /// Creates a new [`GeneticSim`] using a starting population, fitness function, and nextgen function
     pub fn new(
         starting_genomes: Vec<E>,
         fitness: impl Fn(&E) -> f32 + Send + Sync + 'static,
@@ -263,7 +268,7 @@ pub trait GenerateRandom {
     fn gen_random(rng: &mut impl Rng) -> Self;
 }
 
-/// Blanket trait used on collections that contain objects implementing GenerateRandom
+/// Blanket trait used on collections that contain objects implementing [`GenerateRandom`]
 #[cfg(all(feature = "genrand", not(feature = "rayon")))]
 pub trait GenerateRandomCollection<T>
 where
@@ -273,7 +278,7 @@ where
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
 }
 
-/// Rayon version of the [GenerateRandomCollection] trait
+/// Rayon version of the [`GenerateRandomCollection`] trait
 #[cfg(all(feature = "genrand", feature = "rayon"))]
 pub trait GenerateRandomCollection<T>
 where
