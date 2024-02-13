@@ -364,7 +364,7 @@ mod tests {
     #[cfg(feature = "speciation")]
     impl Speciated for MyCrossoverGenome {
         fn is_same_species(&self, other: &Self) -> bool {
-            (self.0.0 - other.0.0).abs() <= 2.
+            (self.0 .0 - other.0 .0).abs() <= 2.
         }
     }
 
@@ -398,11 +398,7 @@ mod tests {
 
     #[cfg(feature = "rayon")]
     fn r_scramble() {
-        let mut sim = GeneticSim::new(
-            Vec::gen_random(1000),
-            my_fitness_fn,
-            scrambling_nextgen,
-        );
+        let mut sim = GeneticSim::new(Vec::gen_random(1000), my_fitness_fn, scrambling_nextgen);
 
         for _ in 0..100 {
             sim.next_generation();
