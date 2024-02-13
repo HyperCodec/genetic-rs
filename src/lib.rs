@@ -291,7 +291,6 @@ where
 {
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
         (0..amount)
-            .into_iter()
             .map(|_| T::gen_random(rng))
             .collect()
     }

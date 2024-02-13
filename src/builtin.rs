@@ -33,7 +33,7 @@ pub trait Speciated: Sized
     fn is_same_species(&self, other: &Self) -> bool;
 
     /// Filters a list of genomes based on whether they are of the same species.
-    fn filter_same_species<'a>(&'a self, genomes: &'a Vec<Self>) -> Vec<&Self> {
+    fn filter_same_species<'a>(&'a self, genomes: &'a [Self]) -> Vec<&Self> {
         genomes
             .iter()
             .filter(|g| self.is_same_species(g))
@@ -207,10 +207,9 @@ pub mod next_gen {
     /// Rayon version of [speciated_crossover_pruning_nextgen]
     #[cfg(all(feature = "speciation", feature = "rayon"))]
     pub fn speciated_crossover_pruning_nextgen<
-        'a,
         G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + Send + PartialEq,
     >(
-        mut rewards: Vec<(G, f32)>,
+        rewards: Vec<(G, f32)>,
     ) -> Vec<G> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
@@ -232,7 +231,6 @@ pub mod next_gen {
 
     #[cfg(feature = "speciation")]
     fn species_helper<
-        'a,
         E: CrossoverReproduction + Speciated + DivisionReproduction,
     >(
         genome: &E,
@@ -241,7 +239,7 @@ pub mod next_gen {
     ) -> E {
         let same_species = genome.filter_same_species(genomes);
 
-        if same_species.len() == 0 {
+        if same_species.is_empty() {
             // division if can't find any of the same species
             return genome.divide(rng);
         }
