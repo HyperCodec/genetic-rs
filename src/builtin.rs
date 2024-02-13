@@ -27,17 +27,13 @@ pub trait Prunable: Sized {
 
 /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too dissimilar.
 #[cfg(feature = "speciation")]
-pub trait Speciated: Sized
-{
+pub trait Speciated: Sized {
     /// Calculates whether two genomes are similar enough to be considered part of the same species.
     fn is_same_species(&self, other: &Self) -> bool;
 
     /// Filters a list of genomes based on whether they are of the same species.
     fn filter_same_species<'a>(&'a self, genomes: &'a [Self]) -> Vec<&Self> {
-        genomes
-            .iter()
-            .filter(|g| self.is_same_species(g))
-            .collect()
+        genomes.iter().filter(|g| self.is_same_species(g)).collect()
     }
 }
 
@@ -177,7 +173,7 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Similar to [crossover_pruning_nextgen], this nextgen will prune and then perform crossover reproduction. 
+    /// Similar to [crossover_pruning_nextgen], this nextgen will prune and then perform crossover reproduction.
     /// With this function, crossover reproduction will only occur if both genomes are of the same species, otherwise one will perform divison to reproduce.
     #[cfg(all(feature = "speciation", not(feature = "rayon")))]
     pub fn speciated_crossover_pruning_nextgen<
@@ -207,7 +203,13 @@ pub mod next_gen {
     /// Rayon version of [speciated_crossover_pruning_nextgen]
     #[cfg(all(feature = "speciation", feature = "rayon"))]
     pub fn speciated_crossover_pruning_nextgen<
-        G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + Send + PartialEq,
+        G: CrossoverReproduction
+            + DivisionReproduction
+            + Speciated
+            + Prunable
+            + Clone
+            + Send
+            + PartialEq,
     >(
         rewards: Vec<(G, f32)>,
     ) -> Vec<G> {
@@ -230,9 +232,7 @@ pub mod next_gen {
     }
 
     #[cfg(feature = "speciation")]
-    fn species_helper<
-        E: CrossoverReproduction + Speciated + DivisionReproduction,
-    >(
+    fn species_helper<E: CrossoverReproduction + Speciated + DivisionReproduction>(
         genome: &E,
         genomes: &[E],
         rng: &mut impl Rng,

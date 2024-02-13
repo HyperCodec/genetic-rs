@@ -290,9 +290,7 @@ where
     T: GenerateRandom,
 {
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
-        (0..amount)
-            .map(|_| T::gen_random(rng))
-            .collect()
+        (0..amount).map(|_| T::gen_random(rng)).collect()
     }
 }
 
