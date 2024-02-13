@@ -55,7 +55,6 @@ fn fitness(g: &MyGenome) -> f32 {
     (g.val1 - g.val2).abs()
 }
 
-
 #[cfg(not(feature = "rayon"))]
 fn main() {
     let mut rng = rand::thread_rng();
