@@ -1,17 +1,17 @@
-/// Used in all of the builtin [next_gen]s to randomly mutate genomes a given amount
+/// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
     /// Mutate the genome with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng);
 }
 
-/// Used in dividually-reproducing [next_gen]s
+/// Used in dividually-reproducing [`next_gen`]s
 pub trait DivisionReproduction {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn divide(&self, rng: &mut impl rand::Rng) -> Self;
 }
 
-/// Used in crossover-reproducing [next_gen]s
+/// Used in crossover-reproducing [`next_gen`]s
 #[cfg(feature = "crossover")]
 pub trait CrossoverReproduction {
     /// Use crossover reproduction to create a new genome.
@@ -37,7 +37,7 @@ pub trait Speciated: Sized {
     }
 }
 
-/// Contains functions used in [GeneticSim][crate::GeneticSim].
+/// Contains functions used in [`GeneticSim`][crate::GeneticSim].
 pub mod next_gen {
     use super::*;
 
@@ -65,7 +65,7 @@ pub mod next_gen {
     }
 
     /// When making a new generation, it despawns half of the genomes and then spawns children from the remaining to reproduce.
-    /// WIP: const generic for mutation rate, will allow for [DivisionReproduction::divide] to accept a custom mutation rate. Delayed due to current Rust limitations
+    /// WIP: const generic for mutation rate, will allow for [`DivisionReproduction::divide`] to accept a custom mutation rate. Delayed due to current Rust limitations
     #[cfg(not(feature = "rayon"))]
     pub fn division_pruning_nextgen<G: DivisionReproduction + Prunable + Clone>(
         rewards: Vec<(G, f32)>,
@@ -89,7 +89,7 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Rayon version of the [division_pruning_nextgen] function
+    /// Rayon version of the [`division_pruning_nextgen`] function
     #[cfg(feature = "rayon")]
     pub fn division_pruning_nextgen<G: DivisionReproduction + Prunable + Clone + Send>(
         rewards: Vec<(G, f32)>,
@@ -142,7 +142,7 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Rayon version of the [crossover_pruning_nextgen] function.
+    /// Rayon version of the [`crossover_pruning_nextgen`] function.
     #[cfg(all(feature = "crossover", feature = "rayon",))]
     pub fn crossover_pruning_nextgen<
         G: CrossoverReproduction + Prunable + Clone + Send + PartialEq,
@@ -173,7 +173,7 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Similar to [crossover_pruning_nextgen], this nextgen will prune and then perform crossover reproduction.
+    /// Similar to [`crossover_pruning_nextgen`], this nextgen will prune and then perform crossover reproduction.
     /// With this function, crossover reproduction will only occur if both genomes are of the same species, otherwise one will perform divison to reproduce.
     #[cfg(all(feature = "speciation", not(feature = "rayon")))]
     pub fn speciated_crossover_pruning_nextgen<
@@ -200,7 +200,7 @@ pub mod next_gen {
         next_gen
     }
 
-    /// Rayon version of [speciated_crossover_pruning_nextgen]
+    /// Rayon version of [`speciated_crossover_pruning_nextgen`]
     #[cfg(all(feature = "speciation", feature = "rayon"))]
     pub fn speciated_crossover_pruning_nextgen<
         G: CrossoverReproduction
@@ -270,7 +270,7 @@ pub mod next_gen {
             .collect()
     }
 
-    /// Rayon version of [pruning_helper].
+    /// Rayon version of [`pruning_helper`].
     #[cfg(feature = "rayon")]
     fn pruning_helper<E: Prunable + Send>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
