@@ -13,7 +13,7 @@ pub trait DivisionReproduction {
 
 /// Used in crossover-reproducing [next_gen]s
 #[cfg(feature = "crossover")]
-pub trait CrossoverReproduction: RandomlyMutable {
+pub trait CrossoverReproduction {
     /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
 }
@@ -23,6 +23,19 @@ pub trait Prunable: Sized {
     /// This does any unfinished work in the despawning process.
     /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn a genome.
     fn despawn(self) {}
+}
+
+#[cfg(feature = "speciation")]
+pub trait Speciated: Sized
+{
+    fn is_same_species(&self, other: &Self) -> bool;
+
+    fn filter_same_species<'a>(&'a self, genomes: &'a Vec<Self>) -> Vec<&Self> {
+        genomes
+            .iter()
+            .filter(|g| self.is_same_species(g))
+            .collect()
+    }
 }
 
 /// Contains functions used in [GeneticSim][crate::GeneticSim].
@@ -36,7 +49,7 @@ pub mod next_gen {
 
     /// When making a new generation, it mutates each genome a certain amount depending on their reward.
     /// This nextgen is very situational and should not be your first choice.
-    pub fn scrambling_nextgen<E: RandomlyMutable>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
+    pub fn scrambling_nextgen<G: RandomlyMutable>(mut rewards: Vec<(G, f32)>) -> Vec<G> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
         let len = rewards.len() as f32;
@@ -45,9 +58,9 @@ pub mod next_gen {
         rewards
             .into_iter()
             .enumerate()
-            .map(|(i, (mut e, _))| {
-                e.mutate(i as f32 / len, &mut rng);
-                e
+            .map(|(i, (mut g, _))| {
+                g.mutate(i as f32 / len, &mut rng);
+                g
             })
             .collect()
     }
@@ -55,9 +68,9 @@ pub mod next_gen {
     /// When making a new generation, it despawns half of the genomes and then spawns children from the remaining to reproduce.
     /// WIP: const generic for mutation rate, will allow for [DivisionReproduction::divide] to accept a custom mutation rate. Delayed due to current Rust limitations
     #[cfg(not(feature = "rayon"))]
-    pub fn division_pruning_nextgen<E: DivisionReproduction + Prunable + Clone>(
-        rewards: Vec<(E, f32)>,
-    ) -> Vec<E> {
+    pub fn division_pruning_nextgen<G: DivisionReproduction + Prunable + Clone>(
+        rewards: Vec<(G, f32)>,
+    ) -> Vec<G> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
@@ -69,9 +82,9 @@ pub mod next_gen {
             .cycle();
 
         while next_gen.len() < population_size {
-            let e = og_champions.next().unwrap();
+            let g = og_champions.next().unwrap();
 
-            next_gen.push(e.divide(&mut rng));
+            next_gen.push(g.divide(&mut rng));
         }
 
         next_gen
@@ -79,9 +92,9 @@ pub mod next_gen {
 
     /// Rayon version of the [division_pruning_nextgen] function
     #[cfg(feature = "rayon")]
-    pub fn division_pruning_nextgen<E: DivisionReproduction + Prunable + Clone + Send>(
-        rewards: Vec<(E, f32)>,
-    ) -> Vec<E> {
+    pub fn division_pruning_nextgen<G: DivisionReproduction + Prunable + Clone + Send>(
+        rewards: Vec<(G, f32)>,
+    ) -> Vec<G> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
@@ -93,9 +106,9 @@ pub mod next_gen {
             .cycle();
 
         while next_gen.len() < population_size {
-            let e = og_champions.next().unwrap();
+            let g = og_champions.next().unwrap();
 
-            next_gen.push(e.divide(&mut rng));
+            next_gen.push(g.divide(&mut rng));
         }
 
         next_gen
@@ -133,10 +146,10 @@ pub mod next_gen {
     /// Rayon version of the [crossover_pruning_nextgen] function.
     #[cfg(all(feature = "crossover", feature = "rayon",))]
     pub fn crossover_pruning_nextgen<
-        E: CrossoverReproduction + Prunable + Clone + Send + PartialEq,
+        G: CrossoverReproduction + Prunable + Clone + Send + PartialEq,
     >(
-        rewards: Vec<(E, f32)>,
-    ) -> Vec<E> {
+        rewards: Vec<(G, f32)>,
+    ) -> Vec<G> {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
@@ -148,17 +161,64 @@ pub mod next_gen {
         let mut og_champs_cycle = og_champions.iter().cycle();
 
         while next_gen.len() < population_size {
-            let e1 = og_champs_cycle.next().unwrap();
-            let e2 = &og_champions[rng.gen_range(0..og_champions.len() - 1)];
+            let g1 = og_champs_cycle.next().unwrap();
+            let g2 = &og_champions[rng.gen_range(0..og_champions.len() - 1)];
 
-            if e1 == e2 {
+            if g1 == g2 {
                 continue;
             }
 
-            next_gen.push(e1.crossover(e2, &mut rng));
+            next_gen.push(g1.crossover(g2, &mut rng));
         }
 
         next_gen
+    }
+
+    #[cfg(feature = "speciation")]
+    pub fn speciated_crossover_pruning_nextgen<
+        'a,
+        G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + PartialEq,
+    >(
+        mut rewards: Vec<(G, f32)>,
+    ) -> Vec<G> {
+        let population_size = rewards.len();
+        let mut next_gen = pruning_helper(rewards);
+
+        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+
+        // TODO remove clone smh
+        let og_champions = next_gen.clone();
+
+        let mut og_champs_cycle = og_champions.iter().cycle();
+
+        while next_gen.len() < population_size {
+            let g1 = og_champs_cycle.next().unwrap();
+            next_gen.push(species_helper(g1, &og_champions, &mut rng));
+        }
+
+        next_gen
+    }
+
+    #[cfg(feature = "speciation")]
+    fn species_helper<
+        'a,
+        E: CrossoverReproduction + Speciated + DivisionReproduction,
+    >(
+        genome: &E,
+        genomes: &Vec<E>,
+        rng: &mut impl Rng,
+    ) -> E {
+        let same_species = genome.filter_same_species(genomes);
+
+        if same_species.len() == 0 {
+            // division if can't find any of the same species
+            return genome.divide(rng);
+        }
+
+        // perform crossover reproduction with genomes of the same species
+        let other = same_species[rng.gen_range(0..same_species.len())];
+
+        genome.crossover(other, rng)
     }
 
     /// helps with builtin pruning nextgens
