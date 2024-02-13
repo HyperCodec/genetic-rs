@@ -4,8 +4,13 @@
 //! A small crate to quickstart genetic algorithm projects
 //!
 //! ### How to Use
-//! First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature.
 //!
+//! ### Features
+//! First off, this crate comes with the `builtin` and `genrand` features by default. 
+//! If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature. 
+//! If you want it to be parallelized, you can add the `rayon` feature. 
+//! If you want your crossover to be speciated, you can add the `speciation` feature.
+//! 
 //! Once you have eveything imported as you wish, you can define your genomes and impl the required traits:
 //!
 //! ```rust, ignore
