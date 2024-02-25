@@ -2,10 +2,3 @@
 members = ["genetic-rs", "genetic-rs-common", "genetic-rs-macros"]
 resolver = "2"
 
-[[example]]
-name = "crossover"
-required-features = ["crossover"]
-
-[[example]]
-name = "speciation"
-required-features = ["speciation"]

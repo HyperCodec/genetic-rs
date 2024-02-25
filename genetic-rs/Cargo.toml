@@ -23,3 +23,11 @@ macros = ["dep:genetic-rs-macros"]
 [dependencies]
 genetic-rs-common = { path = "../genetic-rs-common" }
 genetic-rs-macros = { path = "../genetic-rs-macros", optional = true }
+
+[[example]]
+name = "crossover"
+required-features = ["crossover"]
+
+[[example]]
+name = "speciation"
+required-features = ["speciation"]
