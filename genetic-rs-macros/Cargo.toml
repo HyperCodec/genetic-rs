@@ -1,5 +1,5 @@
 [package]
-name = "genetic-rs-common"
+name = "genetic-rs-macros"
 description = "Macros for genetic-rs"
 version = "0.3.0"
 edition = "2021"
