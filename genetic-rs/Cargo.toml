@@ -24,6 +24,9 @@ macros = ["dep:genetic-rs-macros"]
 genetic-rs-common = { path = "../genetic-rs-common" }
 genetic-rs-macros = { path = "../genetic-rs-macros", optional = true }
 
+[dev-dependencies]
+rand = "0.8.5"
+
 [[example]]
 name = "crossover"
 required-features = ["crossover"]
