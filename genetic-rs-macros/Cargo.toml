@@ -1,0 +1,21 @@
+[package]
+name = "genetic-rs-common"
+description = "Macros for genetic-rs"
+version = "0.3.0"
+edition = "2021"
+authors = ["Inflectrix"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/HyperCodec/genetic-rs"
+repository = "https://github.com/HyperCodec/genetic-rs"
+keywords = ["genetic", "algorithm", "rust"]
+categories = ["algorithms", "science", "simulation"]
+
+
+[lib]
+proc-macro = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+genetic-rs-common = { path = "../genetic-rs-common" }
