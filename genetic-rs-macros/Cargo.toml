@@ -16,7 +16,8 @@ categories = ["algorithms", "science", "simulation"]
 proc-macro = true
 
 [features]
-default = ["genetic-rs-common/builtin"]
+default = []
+crossover = ["genetic-rs-common/crossover"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

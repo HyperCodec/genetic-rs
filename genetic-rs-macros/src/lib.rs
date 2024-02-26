@@ -20,6 +20,8 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
             _ => unimplemented!(),
         }
     
+    } else {
+        panic!("Cannot derive RandomlyMutable for an enum.");
     }
 
     let name = &ast.ident;
@@ -46,6 +48,8 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
             },
             _ => unimplemented!()
         }
+    } else {
+        panic!("Cannot derive DivisionReproduction for an enum.");
     }
 
     let name = &ast.ident;
@@ -56,6 +60,37 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
                 Self {
                     #inner_divide_return
                 }
+            }
+        }
+    }.into()
+}
+
+#[cfg(feature = "crossover")]
+#[proc_macro_derive(CrossoverReproduction)]
+pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+
+    let mut inner_crossover_return = quote!();
+
+    if let Data::Struct(data) = ast.data {
+        match &data.fields {
+            Fields::Named(named) => for field in named.named.iter() {
+                let name = field.ident.clone().unwrap();
+                inner_crossover_return.extend(quote!(#name: self.#name.crossover(&other.#name),));
+            },
+            _ => unimplemented!(),
+        }
+    } else {
+        panic!("Cannot derive CrossoverReproduction for an enum.");
+    }
+
+    let name = &ast.ident;
+
+    quote! {
+        impl CrossoverReproduction for #name {
+            fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+                let mut child = Self { #inner_crossover_return };
+                child.mutate()
             }
         }
     }.into()
@@ -75,6 +110,8 @@ pub fn prunable_derive(input: TokenStream) -> TokenStream {
             },
             _ => unimplemented!()
         }
+    } else {
+        panic!("Cannot derive Prunable for an enum.");
     }
 
     let name = &ast.ident;
