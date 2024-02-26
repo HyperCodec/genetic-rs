@@ -18,7 +18,7 @@ crossover = ["builtin", "genetic-rs-common/crossover"]
 speciation = ["crossover", "genetic-rs-common/speciation"]
 genrand = ["genetic-rs-common/genrand"]
 rayon = ["genetic-rs-common/rayon"]
-macros = ["dep:genetic-rs-macros"]
+macros = ["dep:genetic-rs-macros", "genetic-rs-common/builtin"]
 
 [dependencies]
 genetic-rs-common = { path = "../genetic-rs-common" }

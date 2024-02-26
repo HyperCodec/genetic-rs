@@ -15,7 +15,13 @@ categories = ["algorithms", "science", "simulation"]
 [lib]
 proc-macro = true
 
+[features]
+default = ["genetic-rs-common/builtin"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 genetic-rs-common = { path = "../genetic-rs-common" }
+quote = "1.0.35"
+rand = "0.8.5"
+syn = "2.0.51"
