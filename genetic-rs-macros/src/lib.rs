@@ -14,7 +14,7 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
         match &data.fields {
             Fields::Named(named) => for field in named.named.iter() {
                 let name = field.ident.clone().unwrap();
-                inner_mutate.extend(quote!(self.#name.mutate(rate, rng);));
+                inner_mutate.extend(quote!(<self.#name as RandomlyMutable>::mutate(rate, rng);));
             }
             _ => unimplemented!(),
         }
@@ -43,7 +43,7 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
         match &data.fields {
             Fields::Named(named) => for field in named.named.iter() {
                 let name = field.ident.clone().unwrap();
-                inner_divide_return.extend(quote!(#name: self.#name.divide(rng),));
+                inner_divide_return.extend(quote!(#name: <self.#name as DivisionReproduction>::divide(rng),));
             },
             _ => unimplemented!()
         }
@@ -75,7 +75,7 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
         match &data.fields {
             Fields::Named(named) => for field in named.named.iter() {
                 let name = field.ident.clone().unwrap();
-                inner_crossover_return.extend(quote!(#name: self.#name.crossover(&other.#name),));
+                inner_crossover_return.extend(quote!(#name: <self.#name as CrossoverReproduction>::crossover(&other.#name),));
             },
             _ => unimplemented!(),
         }
@@ -117,7 +117,7 @@ pub fn prunable_derive(input: TokenStream) -> TokenStream {
         match &data.fields {
             Fields::Named(named) => for field in named.named.iter() {
                 let name = field.ident.clone().unwrap();
-                inner_despawn.extend(quote!(self.#name.despawn();));
+                inner_despawn.extend(quote!(<self.#name as Prunable>::despawn();));
             },
             _ => unimplemented!()
         }
