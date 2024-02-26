@@ -1,9 +1,8 @@
 extern crate proc_macro;
 
-use genetic_rs_common::prelude::*;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields, parse::Parse};
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
 #[proc_macro_derive(RandomlyMutable)]
 pub fn randmut_derive(input: TokenStream) -> TokenStream {
