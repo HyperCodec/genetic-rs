@@ -3,7 +3,7 @@ extern crate proc_macro;
 use genetic_rs_common::prelude::*;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, parse::Parse};
 
 #[proc_macro_derive(RandomlyMutable)]
 pub fn randmut_derive(input: TokenStream) -> TokenStream {
@@ -84,13 +84,25 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
         panic!("Cannot derive CrossoverReproduction for an enum.");
     }
 
+
+    // doing it this way to avoid 'mutation_rate possibly uninitialized'
+    let mutation_rate = || -> proc_macro2::TokenStream {
+        for attr in ast.attrs.iter() {
+            if attr.path().is_ident("mutation_rate") {
+                return attr.parse_args().expect("Failed to parse `mutation_rate` attr");
+            }
+        }
+        panic!("Missing `mutation_rate` attr");
+    }();
+    
+
     let name = &ast.ident;
 
     quote! {
         impl CrossoverReproduction for #name {
             fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
                 let mut child = Self { #inner_crossover_return };
-                child.mutate()
+                child.mutate(#mutation_rate, rng)
             }
         }
     }.into()

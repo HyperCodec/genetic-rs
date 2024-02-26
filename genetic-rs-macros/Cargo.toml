@@ -23,6 +23,7 @@ crossover = ["genetic-rs-common/crossover"]
 
 [dependencies]
 genetic-rs-common = { path = "../genetic-rs-common" }
+proc-macro2 = "1.0.78"
 quote = "1.0.35"
 rand = "0.8.5"
 syn = "2.0.51"
