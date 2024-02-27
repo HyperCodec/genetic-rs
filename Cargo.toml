@@ -1,4 +1,3 @@
 [workspace]
 members = ["genetic-rs", "genetic-rs-common", "genetic-rs-macros"]
 resolver = "2"
-
