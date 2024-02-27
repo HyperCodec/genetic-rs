@@ -4,3 +4,6 @@ pub mod prelude {
     #[cfg(feature = "derive")]
     pub use genetic_rs_macros::*;
 }
+
+pub use genetic_rs_common::*;
+pub use genetic_rs_macros::*;
