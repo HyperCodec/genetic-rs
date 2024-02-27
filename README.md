@@ -4,9 +4,10 @@
 [<img alt="crates.io" src="https://img.shields.io/crates/d/genetic-rs" height="20">](https://crates.io/crates/genetic-rs)
 [<img alt="docs.rs" src="https://img.shields.io/docsrs/genetic-rs" height="20">](https://docs.rs/genetic-rs)
 
-A small crate for quickstarting genetic algorithm projects
+A small crate for quickstarting genetic algorithm projects.
 
 ### How to Use
+*note: if you are interested in implementing NEAT with this, try out the [neat](https://crates.io/crates/neat) crate*
 
 ### Features
 First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature. If you want it to be parallelized, you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.
