@@ -12,13 +12,15 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
 
     if let Data::Struct(data) = ast.data {
         match &data.fields {
-            Fields::Named(named) => for field in named.named.iter() {
-                let name = field.ident.clone().unwrap();
-                inner_mutate.extend(quote!(RandomlyMutable::mutate(&mut self.#name, rate, rng);));
+            Fields::Named(named) => {
+                for field in named.named.iter() {
+                    let name = field.ident.clone().unwrap();
+                    inner_mutate
+                        .extend(quote!(RandomlyMutable::mutate(&mut self.#name, rate, rng);));
+                }
             }
             _ => unimplemented!(),
         }
-    
     } else {
         panic!("Cannot derive RandomlyMutable for an enum.");
     }
@@ -30,22 +32,26 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
                 #inner_mutate
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 #[proc_macro_derive(DivisionReproduction)]
 pub fn divrepr_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    
+
     let mut inner_divide_return = quote!();
 
     if let Data::Struct(data) = ast.data {
         match &data.fields {
-            Fields::Named(named) => for field in named.named.iter() {
-                let name = field.ident.clone().unwrap();
-                inner_divide_return.extend(quote!(#name: DivisionReproduction::divide(&self.#name, rng),));
-            },
-            _ => unimplemented!()
+            Fields::Named(named) => {
+                for field in named.named.iter() {
+                    let name = field.ident.clone().unwrap();
+                    inner_divide_return
+                        .extend(quote!(#name: DivisionReproduction::divide(&self.#name, rng),));
+                }
+            }
+            _ => unimplemented!(),
         }
     } else {
         panic!("Cannot derive DivisionReproduction for an enum.");
@@ -61,7 +67,8 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
                 }
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 #[cfg(feature = "crossover")]
@@ -73,10 +80,12 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
 
     if let Data::Struct(data) = ast.data {
         match &data.fields {
-            Fields::Named(named) => for field in named.named.iter() {
-                let name = field.ident.clone().unwrap();
-                inner_crossover_return.extend(quote!(#name: CrossoverReproduction::crossover(&self.#name, &other.#name, rng),));
-            },
+            Fields::Named(named) => {
+                for field in named.named.iter() {
+                    let name = field.ident.clone().unwrap();
+                    inner_crossover_return.extend(quote!(#name: CrossoverReproduction::crossover(&self.#name, &other.#name, rng),));
+                }
+            }
             _ => unimplemented!(),
         }
     } else {
@@ -91,7 +100,8 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
                 Self { #inner_crossover_return }
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 #[proc_macro_derive(Prunable)]
@@ -102,11 +112,13 @@ pub fn prunable_derive(input: TokenStream) -> TokenStream {
 
     if let Data::Struct(data) = ast.data {
         match &data.fields {
-            Fields::Named(named) => for field in named.named.iter() {
-                let name = field.ident.clone().unwrap();
-                inner_despawn.extend(quote!(Prunable::despawn(self.#name);));
-            },
-            _ => unimplemented!()
+            Fields::Named(named) => {
+                for field in named.named.iter() {
+                    let name = field.ident.clone().unwrap();
+                    inner_despawn.extend(quote!(Prunable::despawn(self.#name);));
+                }
+            }
+            _ => unimplemented!(),
         }
     } else {
         panic!("Cannot derive Prunable for an enum.");
@@ -120,7 +132,8 @@ pub fn prunable_derive(input: TokenStream) -> TokenStream {
                 #inner_despawn
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 #[cfg(feature = "genrand")]
@@ -132,12 +145,15 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
 
     if let Data::Struct(data) = ast.data {
         match &data.fields {
-            Fields::Named(named) => for field in named.named.iter() {
-                let name = field.ident.clone().unwrap();
-                let ty = field.ty.clone();
-                genrand_inner_return.extend(quote!(#name: <#ty as GenerateRandom>::gen_random(rng),));
-            },
-            _ => unimplemented!()
+            Fields::Named(named) => {
+                for field in named.named.iter() {
+                    let name = field.ident.clone().unwrap();
+                    let ty = field.ty.clone();
+                    genrand_inner_return
+                        .extend(quote!(#name: <#ty as GenerateRandom>::gen_random(rng),));
+                }
+            }
+            _ => unimplemented!(),
         }
     }
 
@@ -150,5 +166,6 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
                 }
             }
         }
-    }.into()
+    }
+    .into()
 }

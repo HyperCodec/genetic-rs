@@ -22,13 +22,17 @@ impl DivisionReproduction for TestGene {
 #[cfg(feature = "crossover")]
 impl CrossoverReproduction for TestGene {
     fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
-        Self { a: (self.a + other.a + rng.gen_range(-0.5..0.5)) / 2. }
+        Self {
+            a: (self.a + other.a + rng.gen_range(-0.5..0.5)) / 2.,
+        }
     }
 }
 
 impl GenerateRandom for TestGene {
     fn gen_random(rng: &mut impl rand::Rng) -> Self {
-        Self { a: rng.gen_range(-1.0..1.0) }
+        Self {
+            a: rng.gen_range(-1.0..1.0),
+        }
     }
 }
 
