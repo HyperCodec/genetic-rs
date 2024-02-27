@@ -21,6 +21,10 @@ rayon = ["dep:rayon"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[package.metadata.docs.rs]
+features = ["crossover", "speciation"]
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 replace_with = "0.1.7"
 rand = "0.8.5"

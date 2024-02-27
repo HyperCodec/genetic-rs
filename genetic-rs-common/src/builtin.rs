@@ -13,6 +13,7 @@ pub trait DivisionReproduction {
 
 /// Used in crossover-reproducing [`next_gen`]s
 #[cfg(feature = "crossover")]
+#[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
 pub trait CrossoverReproduction {
     /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
@@ -27,6 +28,7 @@ pub trait Prunable: Sized {
 
 /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too dissimilar.
 #[cfg(feature = "speciation")]
+#[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
 pub trait Speciated: Sized {
     /// Calculates whether two genomes are similar enough to be considered part of the same species.
     fn is_same_species(&self, other: &Self) -> bool;
@@ -115,6 +117,7 @@ pub mod next_gen {
 
     /// Prunes half of the genomes and randomly crosses over the remaining ones.
     #[cfg(all(feature = "crossover", not(feature = "rayon")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
     pub fn crossover_pruning_nextgen<E: CrossoverReproduction + Prunable + Clone + PartialEq>(
         rewards: Vec<(E, f32)>,
     ) -> Vec<E> {
@@ -176,6 +179,7 @@ pub mod next_gen {
     /// Similar to [`crossover_pruning_nextgen`], this nextgen will prune and then perform crossover reproduction.
     /// With this function, crossover reproduction will only occur if both genomes are of the same species, otherwise one will perform divison to reproduce.
     #[cfg(all(feature = "speciation", not(feature = "rayon")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "specation")))]
     pub fn speciated_crossover_pruning_nextgen<
         'a,
         G: CrossoverReproduction + DivisionReproduction + Speciated + Prunable + Clone + PartialEq,
