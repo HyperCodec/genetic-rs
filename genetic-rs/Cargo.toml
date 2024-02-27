@@ -1,0 +1,40 @@
+[package]
+name = "genetic-rs"
+description = "A small crate for quickstarting genetic algorithm projects"
+version = "0.3.0"
+edition = "2021"
+authors = ["Inflectrix"]
+license = "MIT"
+readme = "../README.md"
+homepage = "https://github.com/HyperCodec/genetic-rs"
+repository = "https://github.com/HyperCodec/genetic-rs"
+keywords = ["genetic", "algorithm", "rust"]
+categories = ["algorithms", "science", "simulation"]
+
+[features]
+default = ["builtin", "genrand"]
+builtin = ["genetic-rs-common/builtin"]
+crossover = ["builtin", "genetic-rs-common/crossover", "genetic-rs-macros/crossover"]
+speciation = ["crossover", "genetic-rs-common/speciation"]
+genrand = ["genetic-rs-common/genrand"]
+rayon = ["genetic-rs-common/rayon"]
+derive = ["dep:genetic-rs-macros", "genetic-rs-common/builtin"]
+
+[dependencies]
+genetic-rs-common = { path = "../genetic-rs-common" }
+genetic-rs-macros = { path = "../genetic-rs-macros", optional = true }
+
+[dev-dependencies]
+rand = "0.8.5"
+
+[[example]]
+name = "crossover"
+required-features = ["crossover"]
+
+[[example]]
+name = "speciation"
+required-features = ["speciation"]
+
+[[example]]
+name = "derive"
+required-features = ["derive"]
