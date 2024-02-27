@@ -16,8 +16,9 @@ categories = ["algorithms", "science", "simulation"]
 proc-macro = true
 
 [features]
-default = []
+default = ["genrand"]
 crossover = ["genetic-rs-common/crossover"]
+genrand = []
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,5 +26,4 @@ crossover = ["genetic-rs-common/crossover"]
 genetic-rs-common = { path = "../genetic-rs-common" }
 proc-macro2 = "1.0.78"
 quote = "1.0.35"
-rand = "0.8.5"
 syn = "2.0.51"

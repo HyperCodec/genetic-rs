@@ -64,7 +64,6 @@ dependencies = [
  "genetic-rs-common",
  "proc-macro2",
  "quote",
- "rand",
  "syn",
 ]
 

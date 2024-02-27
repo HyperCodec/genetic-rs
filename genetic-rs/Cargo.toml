@@ -5,7 +5,7 @@ version = "0.3.0"
 edition = "2021"
 authors = ["Inflectrix"]
 license = "MIT"
-readme = "README.md"
+readme = "../README.md"
 homepage = "https://github.com/HyperCodec/genetic-rs"
 repository = "https://github.com/HyperCodec/genetic-rs"
 keywords = ["genetic", "algorithm", "rust"]
@@ -14,7 +14,7 @@ categories = ["algorithms", "science", "simulation"]
 [features]
 default = ["builtin", "genrand"]
 builtin = ["genetic-rs-common/builtin"]
-crossover = ["builtin", "genetic-rs-common/crossover"]
+crossover = ["builtin", "genetic-rs-common/crossover", "genetic-rs-macros/crossover"]
 speciation = ["crossover", "genetic-rs-common/speciation"]
 genrand = ["genetic-rs-common/genrand"]
 rayon = ["genetic-rs-common/rayon"]
@@ -34,3 +34,7 @@ required-features = ["crossover"]
 [[example]]
 name = "speciation"
 required-features = ["speciation"]
+
+[[example]]
+name = "derive"
+required-features = ["derive"]
