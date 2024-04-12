@@ -221,11 +221,7 @@ where
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
-    pub fn new(
-        starting_genomes: Vec<G>,
-        fitness: F,
-        next_gen: NG,
-    ) -> Self {
+    pub fn new(starting_genomes: Vec<G>, fitness: F, next_gen: NG) -> Self {
         Self {
             genomes: starting_genomes,
             fitness,
@@ -259,11 +255,7 @@ where
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
-    pub fn new(
-        starting_genomes: Vec<G>,
-        fitness: F,
-        next_gen: NG,
-    ) -> Self {
+    pub fn new(starting_genomes: Vec<G>, fitness: F, next_gen: NG) -> Self {
         Self {
             genomes: starting_genomes,
             fitness,
