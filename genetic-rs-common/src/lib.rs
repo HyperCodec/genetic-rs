@@ -130,7 +130,7 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 
 /// The simulation controller.
 /// ```rust
-/// use genetic_rs::prelude::*;
+/// use genetic_rs_common::prelude::*;
 ///
 /// #[derive(Debug, Clone)]
 /// struct MyGenome {
