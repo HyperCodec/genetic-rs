@@ -2,93 +2,7 @@
 #![allow(clippy::needless_doctest_main)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! A small crate to quickstart genetic algorithm projects
-//!
-//! ### How to Use
-//!
-//! ### Features
-//! First off, this crate comes with the `builtin` and `genrand` features by default.
-//! If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature.
-//! If you want it to be parallelized, you can add the `rayon` feature.
-//! If you want your crossover to be speciated, you can add the `speciation` feature.
-//!
-//! Once you have eveything imported as you wish, you can define your genomes and impl the required traits:
-//!
-//! ```rust, ignore
-//! #[derive(Clone, Debug)] // clone is currently a required derive for pruning nextgens.
-//! struct MyGenome {
-//!     field1: f32,
-//! }
-//!
-//! // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`
-//! impl RandomlyMutable for MyGenome {
-//!     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-//!         self.field1 += rng.gen::<f32>() * rate;
-//!     }
-//! }
-//!
-//! // required for `division_pruning_nextgen`.
-//! impl DivisionReproduction for MyGenome {
-//!     fn divide(&self, rng: &mut impl rand::Rng) -> Self {
-//!         let mut child = self.clone();
-//!         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
-//!         child
-//!     }
-//! }
-//!
-//! // required for the builtin pruning algorithms.
-//! impl Prunable for MyGenome {
-//!     fn despawn(self) {
-//!         // unneccessary to implement this function, but it can be useful for debugging and cleaning up genomes.
-//!         println!("{:?} died", self);
-//!     }
-//! }
-//!
-//! // helper trait that allows us to use `Vec::gen_random` for the initial population.
-//! impl GenerateRandom for MyGenome {
-//!     fn gen_random(rng: &mut impl rand::Rng) -> Self {
-//!         Self { field1: rng.gen() }
-//!     }
-//! }
-//! ```
-//!
-//! Once you have a struct, you must create your fitness function:
-//! ```rust, ignore
-//! fn my_fitness_fn(ent: &MyGenome) -> f32 {
-//!     // this just means that the algorithm will try to create as big a number as possible due to fitness being directly taken from the field.
-//!     // in a more complex genetic algorithm, you will want to utilize `ent` to test them and generate a reward.
-//!     ent.field1
-//! }
-//! ```
-//!
-//!
-//! Once you have your fitness function, you can create a [`GeneticSim`] object to manage and control the evolutionary steps:
-//!
-//! ```rust, ignore
-//! fn main() {
-//!     let mut rng = rand::thread_rng();
-//!     let mut sim = GeneticSim::new(
-//!         // you must provide a random starting population.
-//!         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
-//!         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
-//!         Vec::gen_random(&mut rng, 100),
-//!         my_fitness_fn,
-//!         division
-//!     );
-//!     
-//!     // perform evolution (100 gens)
-//!     for _ in 0..100 {
-//!         sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.genomes` in between these calls
-//!     }
-//!     
-//!     dbg!(sim.genomes);
-//! }
-//! ```
-//!
-//! That is the minimal code for a working pruning-based genetic algorithm. You can [read the docs](https://docs.rs/genetic-rs) or [check the examples](/examples/) for more complicated systems.
-//!
-//! ### License
-//! This project falls under the `MIT` license.
+//! The crate containing the core traits and structs of genetic-rs.
 
 use replace_with::replace_with_or_abort;
 
@@ -105,14 +19,32 @@ pub mod prelude;
 use rayon::prelude::*;
 
 /// Represents a fitness function. Inputs a reference to the genome and outputs an f32.
-pub type FitnessFn<E> = dyn Fn(&E) -> f32 + Send + Sync + 'static;
+pub trait FitnessFn<G> {
+    /// Evaluates a genome's fitness
+    fn fitness(&self, genome: &G) -> f32;
+}
+
+impl<F: Fn(&G) -> f32, G> FitnessFn<G> for F {
+    fn fitness(&self, genome: &G) -> f32 {
+        (self)(genome)
+    }
+}
 
 /// Represents a nextgen function. Inputs genomes and rewards and produces the next generation
-pub type NextgenFn<E> = dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static;
+pub trait NextgenFn<G> {
+    /// Creates the next generation from the current fitness values.
+    fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G>;
+}
+
+impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
+    fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G> {
+        (self)(fitness)
+    }
+}
 
 /// The simulation controller.
 /// ```rust
-/// use genetic_rs::prelude::*;
+/// use genetic_rs_common::prelude::*;
 ///
 /// #[derive(Debug, Clone)]
 /// struct MyGenome {
@@ -168,44 +100,46 @@ pub type NextgenFn<E> = dyn Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static;
 /// }
 /// ```
 #[cfg(not(feature = "rayon"))]
-pub struct GeneticSim<E>
+pub struct GeneticSim<F, NG, G>
 where
-    E: Sized,
+    F: FitnessFn<G>,
+    NG: NextgenFn<G>,
+    G: Sized,
 {
     /// The current population of genomes
-    pub genomes: Vec<E>,
-    fitness: Box<FitnessFn<E>>,
-    next_gen: Box<NextgenFn<E>>,
+    pub genomes: Vec<G>,
+    fitness: F,
+    next_gen: NG,
 }
 
 /// Rayon version of the [`GeneticSim`] struct
 #[cfg(feature = "rayon")]
-pub struct GeneticSim<E>
+pub struct GeneticSim<F, NG, G>
 where
-    E: Sized + Send,
+    F: FitnessFn<G> + Send + Sync,
+    NG: NextgenFn<G> + Send + Sync,
+    G: Sized + Send,
 {
     /// The current population of genomes
-    pub genomes: Vec<E>,
-    fitness: Box<FitnessFn<E>>,
-    next_gen: Box<NextgenFn<E>>,
+    pub genomes: Vec<G>,
+    fitness: F,
+    next_gen: NG,
 }
 
 #[cfg(not(feature = "rayon"))]
-impl<E> GeneticSim<E>
+impl<F, NG, G> GeneticSim<F, NG, G>
 where
-    E: Sized,
+    F: FitnessFn<G>,
+    NG: NextgenFn<G>,
+    G: Sized,
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
-    pub fn new(
-        starting_genomes: Vec<E>,
-        fitness: impl Fn(&E) -> f32 + Send + Sync + 'static,
-        next_gen: impl Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static,
-    ) -> Self {
+    pub fn new(starting_genomes: Vec<G>, fitness: F, next_gen: NG) -> Self {
         Self {
             genomes: starting_genomes,
-            fitness: Box::new(fitness),
-            next_gen: Box::new(next_gen),
+            fitness,
+            next_gen,
         }
     }
 
@@ -216,31 +150,30 @@ where
             let rewards = genomes
                 .into_iter()
                 .map(|e| {
-                    let fitness: f32 = (self.fitness)(&e);
+                    let fitness: f32 = self.fitness.fitness(&e);
                     (e, fitness)
                 })
                 .collect();
 
-            (self.next_gen)(rewards)
+            self.next_gen.next_gen(rewards)
         });
     }
 }
 
 #[cfg(feature = "rayon")]
-impl<E> GeneticSim<E>
+impl<F, NG, G> GeneticSim<F, NG, G>
 where
-    E: Sized + Send,
+    F: FitnessFn<G> + Send + Sync,
+    NG: NextgenFn<G> + Send + Sync,
+    G: Sized + Send,
 {
-    /// Creates a new [`GeneticSim`] using a starting population, fitness function, and nextgen function
-    pub fn new(
-        starting_genomes: Vec<E>,
-        fitness: impl Fn(&E) -> f32 + Send + Sync + 'static,
-        next_gen: impl Fn(Vec<(E, f32)>) -> Vec<E> + Send + Sync + 'static,
-    ) -> Self {
+    /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
+    /// a given fitness function, and a given nextgen function.
+    pub fn new(starting_genomes: Vec<G>, fitness: F, next_gen: NG) -> Self {
         Self {
             genomes: starting_genomes,
-            fitness: Box::new(fitness),
-            next_gen: Box::new(next_gen),
+            fitness,
+            next_gen,
         }
     }
 
@@ -250,12 +183,12 @@ where
             let rewards = genomes
                 .into_par_iter()
                 .map(|e| {
-                    let fitness: f32 = (self.fitness)(&e);
+                    let fitness: f32 = self.fitness.fitness(&e);
                     (e, fitness)
                 })
                 .collect();
 
-            (self.next_gen)(rewards)
+            self.next_gen.next_gen(rewards)
         });
     }
 }
@@ -323,7 +256,7 @@ mod tests {
 
     #[test]
     fn send_sim() {
-        let mut sim = GeneticSim::new(vec![()], |_| 0., |_| vec![()]);
+        let mut sim = GeneticSim::new(vec![()], |_: &()| 0., |_: Vec<((), f32)>| vec![()]);
 
         let h = std::thread::spawn(move || {
             sim.next_generation();
