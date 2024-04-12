@@ -110,7 +110,7 @@ pub trait FitnessFn<G> {
     fn fitness(&self, genome: &G) -> f32;
 }
 
-impl<F: Fn(&G) -> f32 + Send + Sync + 'static, G> FitnessFn<G> for F {
+impl<F: Fn(&G) -> f32, G> FitnessFn<G> for F {
     fn fitness(&self, genome: &G) -> f32 {
         (self)(genome)
     }
@@ -122,7 +122,7 @@ pub trait NextgenFn<G> {
     fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G>;
 }
 
-impl<F: Fn(Vec<(G, f32)>) -> Vec<G> + Send + Sync + 'static, G> NextgenFn<G> for F {
+impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
     fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G> {
         (self)(fitness)
     }
@@ -200,14 +200,16 @@ where
 
 /// Rayon version of the [`GeneticSim`] struct
 #[cfg(feature = "rayon")]
-pub struct GeneticSim<E>
+pub struct GeneticSim<F, NG, G>
 where
-    E: Sized + Send,
+    F: FitnessFn<G> + Send + Sync,
+    NG: NextgenFn<G> + Send + Sync,
+    G: Sized + Send,
 {
     /// The current population of genomes
-    pub genomes: Vec<E>,
-    fitness: Box<FitnessFn<E>>,
-    next_gen: Box<NextgenFn<E>>,
+    pub genomes: Vec<G>,
+    fitness: F,
+    next_gen: NG,
 }
 
 #[cfg(not(feature = "rayon"))]
@@ -249,12 +251,11 @@ where
 }
 
 #[cfg(feature = "rayon")]
-#[cfg(not(feature = "rayon"))]
 impl<F, NG, G> GeneticSim<F, NG, G>
 where
-    F: FitnessFn<G>,
-    NG: NextgenFn<G>,
-    G: Sized,
+    F: FitnessFn<G> + Send + Sync,
+    NG: NextgenFn<G> + Send + Sync,
+    G: Sized + Send,
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
@@ -349,7 +350,7 @@ mod tests {
 
     #[test]
     fn send_sim() {
-        let mut sim = GeneticSim::new(vec![()], |_| 0., |_| vec![()]);
+        let mut sim = GeneticSim::new(vec![()], |_: &()| 0., |_: Vec<((), f32)>| vec![()]);
 
         let h = std::thread::spawn(move || {
             sim.next_generation();
