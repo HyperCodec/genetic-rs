@@ -1,12 +1,12 @@
 [package]
 name = "genetic-rs-macros"
 description = "Macros for genetic-rs"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 authors = ["Inflectrix"]
 license = "MIT"
-homepage = "https://github.com/HyperCodec/genetic-rs"
-repository = "https://github.com/HyperCodec/genetic-rs"
+homepage = "https://github.com/inflectrix/genetic-rs"
+repository = "https://github.com/inflectrix/genetic-rs"
 keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
