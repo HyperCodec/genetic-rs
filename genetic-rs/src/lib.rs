@@ -1,3 +1,5 @@
+#![allow(clippy::needless_doctest_main)]
+
 //! A small crate to quickstart genetic algorithm projects
 //!
 //! ### How to Use
