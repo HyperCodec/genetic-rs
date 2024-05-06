@@ -3,11 +3,11 @@ name = "genetic-rs-common"
 description = "Commonly-used parts of genetic-rs"
 version = "0.5.1"
 edition = "2021"
-authors = ["Inflectrix"]
+authors = ["HyperCodec"]
 license = "MIT"
 readme = "../README.md"
-homepage = "https://github.com/inflectrix/genetic-rs"
-repository = "https://github.com/inflectrix/genetic-rs"
+homepage = "https://github.com/HyperCodec/genetic-rs"
+repository = "https://github.com/HyperCodec/genetic-rs"
 keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
