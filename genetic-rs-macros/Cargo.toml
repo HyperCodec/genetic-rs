@@ -15,7 +15,7 @@ categories = ["algorithms", "science", "simulation"]
 proc-macro = true
 
 [features]
-default = ["genrand"]
+default = ["genrand", "crossover"]
 crossover = ["genetic-rs-common/crossover"]
 genrand = []
 
