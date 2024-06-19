@@ -1,13 +1,13 @@
 [package]
 name = "genetic-rs"
 description = "A small crate for quickstarting genetic algorithm projects"
-version = "0.5.1"
-edition = "2021"
-authors = ["Inflectrix"]
-license = "MIT"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 readme = "../README.md"
-homepage = "https://github.com/inflectrix/genetic-rs"
-repository = "https://github.com/inflectrix/genetic-rs"
+homepage.workspace = true
+repository.workspace = true
 keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
