@@ -41,7 +41,7 @@ checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
 
 [[package]]
 name = "genetic-rs"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "genetic-rs-common",
  "genetic-rs-macros",
@@ -50,7 +50,7 @@ dependencies = [
 
 [[package]]
 name = "genetic-rs-common"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "rand",
  "rayon",
@@ -59,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "genetic-rs-macros"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "genetic-rs-common",
  "proc-macro2",
