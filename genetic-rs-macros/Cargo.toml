@@ -1,12 +1,12 @@
 [package]
 name = "genetic-rs-macros"
 description = "Macros for genetic-rs"
-version = "0.5.1"
-edition = "2021"
-authors = ["HyperCodec"]
-license = "MIT"
-homepage = "https://github.com/HyperCodec/genetic-rs"
-repository = "https://github.com/HyperCodec/genetic-rs"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
@@ -15,7 +15,7 @@ categories = ["algorithms", "science", "simulation"]
 proc-macro = true
 
 [features]
-default = ["genrand"]
+default = ["genrand", "crossover"]
 crossover = ["genetic-rs-common/crossover"]
 genrand = []
 
