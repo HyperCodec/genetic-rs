@@ -67,7 +67,6 @@ pub mod next_gen {
     }
 
     /// When making a new generation, it despawns half of the genomes and then spawns children from the remaining to reproduce.
-    /// WIP: const generic for mutation rate, will allow for [`DivisionReproduction::divide`] to accept a custom mutation rate. Delayed due to current Rust limitations
     #[cfg(not(feature = "rayon"))]
     pub fn division_pruning_nextgen<G: DivisionReproduction + Prunable + Clone>(
         rewards: Vec<(G, f32)>,
