@@ -1,3 +1,5 @@
+pub extern crate rand;
+
 pub use crate::*;
 
 #[cfg(feature = "builtin")]
