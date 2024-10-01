@@ -77,10 +77,7 @@ fn main() {
     );
  
     // perform evolution (100 gens)
-    for _ in 0..100 {
-        // there might be some cases where you want to do something between calls.
-        sim.next_generation();
-    }
+    sim.perform_generations(100);
  
     dbg!(sim.genomes);
 }

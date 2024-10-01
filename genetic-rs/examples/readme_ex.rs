@@ -57,9 +57,7 @@ fn main() {
     );
 
     // perform evolution (100 gens)
-    for _ in 0..100 {
-        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.genomes` in between these calls
-    }
+    sim.perform_generations(100);
 
     dbg!(sim.genomes);
 }

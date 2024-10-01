@@ -158,6 +158,13 @@ where
             self.next_gen.next_gen(rewards)
         });
     }
+
+    /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
+    pub fn perform_generations(&mut self, count: usize) {
+        for _ in 0..count {
+            self.next_generation();
+        }
+    }
 }
 
 #[cfg(feature = "rayon")]
@@ -190,6 +197,13 @@ where
 
             self.next_gen.next_gen(rewards)
         });
+    }
+
+    /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
+    pub fn perform_generations(&mut self, count: usize) {
+        for _ in 0..count {
+            self.next_generation();
+        }
     }
 }
 
