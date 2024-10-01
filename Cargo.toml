@@ -3,7 +3,7 @@ members = ["genetic-rs", "genetic-rs-common", "genetic-rs-macros"]
 resolver = "2"
 
 [workspace.package]
-version = "0.5.3"
+version = "0.5.4"
 authors = ["HyperCodec"]
 homepage = "https://github.com/hypercodec/genetic-rs"
 repository = "https://github.com/hypercodec/genetic-rs"
