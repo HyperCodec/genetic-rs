@@ -45,9 +45,7 @@ fn main() {
         crossover_pruning_nextgen,
     );
 
-    for _ in 0..100 {
-        sim.next_generation();
-    }
+    sim.perform_generations(100);
 
     dbg!(sim.genomes, magic_number);
 }

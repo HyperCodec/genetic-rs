@@ -66,9 +66,7 @@ fn main() {
     );
 
     // speciation tends to take more generations (not needed to this extent, but the crate is fast enough to where it isn't much of a compromise)
-    for _ in 0..1000 {
-        sim.next_generation();
-    }
+    sim.perform_generations(100);
 
     dbg!(sim.genomes);
 }
