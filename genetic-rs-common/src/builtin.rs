@@ -392,9 +392,7 @@ mod tests {
             scrambling_nextgen,
         );
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
@@ -403,9 +401,7 @@ mod tests {
     fn r_scramble() {
         let mut sim = GeneticSim::new(Vec::gen_random(1000), my_fitness_fn, scrambling_nextgen);
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
@@ -420,9 +416,7 @@ mod tests {
             division_pruning_nextgen,
         );
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
@@ -438,9 +432,7 @@ mod tests {
             crossover_pruning_nextgen,
         );
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
@@ -454,9 +446,7 @@ mod tests {
             crossover_pruning_nextgen,
         );
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
@@ -472,9 +462,7 @@ mod tests {
             speciated_crossover_pruning_nextgen,
         );
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
@@ -488,9 +476,7 @@ mod tests {
             speciated_crossover_pruning_nextgen,
         );
 
-        for _ in 0..100 {
-            sim.next_generation();
-        }
+        sim.perform_generations(100);
 
         dbg!(sim.genomes);
     }
