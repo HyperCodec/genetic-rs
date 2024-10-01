@@ -21,8 +21,8 @@ rayon = ["genetic-rs-common/rayon"]
 derive = ["dep:genetic-rs-macros", "genetic-rs-common/builtin"]
 
 [dependencies]
-genetic-rs-common = { path = "../genetic-rs-common", version = "0.5.3" }
-genetic-rs-macros = { path = "../genetic-rs-macros", version = "0.5.3", optional = true }
+genetic-rs-common = { path = "../genetic-rs-common", version = "0.5.4" }
+genetic-rs-macros = { path = "../genetic-rs-macros", version = "0.5.4", optional = true }
 
 [dev-dependencies]
 rand = "0.8.5"
