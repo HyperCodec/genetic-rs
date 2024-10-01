@@ -10,7 +10,7 @@ A small crate for quickstarting genetic algorithm projects.
 *note: if you are interested in implementing NEAT with this, try out the [neat](https://crates.io/crates/neat) crate*
 
 ### Features
-First off, this crate comes with the `builtin` and `genrand` features by default. If you want to add the builtin crossover reproduction extension, you can do so by adding the `crossover` feature. If you want it to be parallelized, you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.
+First off, this crate comes with the `builtin`, `crossover`, and `genrand` features by default. If you want it to be parallelized, you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.
 
 Once you have eveything imported as you wish, you can define your genome and impl the required traits:
 
