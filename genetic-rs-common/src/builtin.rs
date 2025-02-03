@@ -19,7 +19,7 @@ pub trait CrossoverReproduction {
     fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
 }
 
-/// Used in pruning [next_gen]s
+/// Used in pruning [`next_gen`]s
 pub trait Prunable: Sized {
     /// This does any unfinished work in the despawning process.
     /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn a genome.
