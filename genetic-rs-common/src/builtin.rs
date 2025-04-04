@@ -1,14 +1,17 @@
+use crate::Rng;
+use rand::Rng as RandRNG;
+
 /// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
     /// Mutate the genome with a given mutation rate (0..1)
-    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng);
+    fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
 }
 
 /// Used in dividually-reproducing [`next_gen`]s
 pub trait DivisionReproduction {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
-    fn divide(&self, rng: &mut impl rand::Rng) -> Self;
+    fn divide(&self, rng: &mut impl Rng) -> Self;
 }
 
 /// Used in crossover-reproducing [`next_gen`]s
@@ -16,7 +19,7 @@ pub trait DivisionReproduction {
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
 pub trait CrossoverReproduction {
     /// Use crossover reproduction to create a new genome.
-    fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self;
+    fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self;
 }
 
 /// Used in pruning [next_gen]s
@@ -45,8 +48,6 @@ pub mod next_gen {
 
     #[cfg(feature = "rayon")]
     use rayon::prelude::*;
-
-    use rand::prelude::*;
 
     /// When making a new generation, it mutates each genome a certain amount depending on their reward.
     /// This nextgen is very situational and should not be your first choice.
@@ -308,7 +309,7 @@ mod tests {
     }
 
     impl DivisionReproduction for MyGenome {
-        fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+        fn divide(&self, rng: &mut impl Rng) -> Self {
             let mut child = self.clone();
             child.mutate(0.25, rng);
             child
@@ -333,14 +334,14 @@ mod tests {
 
     #[cfg(feature = "crossover")]
     impl RandomlyMutable for MyCrossoverGenome {
-        fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+        fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
             self.0.mutate(rate, rng);
         }
     }
 
     #[cfg(feature = "crossover")]
     impl CrossoverReproduction for MyCrossoverGenome {
-        fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+        fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
             let mut child = Self(MyGenome((self.0 .0 + other.0 .0) / 2.));
             child.mutate(0.25, rng);
             child
@@ -352,7 +353,7 @@ mod tests {
 
     #[cfg(feature = "crossover")]
     impl GenerateRandom for MyCrossoverGenome {
-        fn gen_random(rng: &mut impl rand::Rng) -> Self {
+        fn gen_random(rng: &mut impl Rng) -> Self {
             Self(MyGenome::gen_random(rng))
         }
     }

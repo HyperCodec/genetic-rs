@@ -18,6 +18,20 @@ pub mod prelude;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
+#[cfg(feature = "tracing")]
+#[allow(missing_docs)]
+pub trait Rng: rand::Rng + std::fmt::Debug {}
+
+#[cfg(feature = "tracing")]
+impl<T: rand::Rng + std::fmt::Debug> Rng for T {}
+
+#[cfg(not(feature = "tracing"))]
+#[allow(missing_docs)]
+pub trait Rng: rand::Rng {}
+
+#[cfg(not(feature = "tracing"))]
+impl<T: rand::Rng> Rng for T {}
+
 /// Represents a fitness function. Inputs a reference to the genome and outputs an f32.
 pub trait FitnessFn<G> {
     /// Evaluates a genome's fitness
@@ -206,9 +220,6 @@ where
         }
     }
 }
-
-#[cfg(feature = "genrand")]
-use rand::prelude::*;
 
 /// Helper trait used in the generation of random starting populations
 #[cfg(feature = "genrand")]

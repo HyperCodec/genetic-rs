@@ -9,14 +9,14 @@ struct MyGenome {
 
 // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`.
 impl RandomlyMutable for MyGenome {
-    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
         self.field1 += rng.random::<f32>() * rate;
     }
 }
 
 // required for `division_pruning_nextgen`.
 impl DivisionReproduction for MyGenome {
-    fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+    fn divide(&self, rng: &mut impl Rng) -> Self {
         let mut child = self.clone();
         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
         child
