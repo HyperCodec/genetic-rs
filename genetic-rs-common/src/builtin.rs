@@ -54,7 +54,7 @@ pub mod next_gen {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
         let len = rewards.len() as f32;
-        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+        let mut rng = rand::rng();
 
         rewards
             .into_iter()
@@ -74,7 +74,7 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
-        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+        let mut rng = rand::rng();
 
         let mut og_champions = next_gen
             .clone() // TODO remove if possible. currently doing so because `next_gen` is borrowed as mutable later
@@ -98,7 +98,7 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
-        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+        let mut rng = StdRng::from_rng(rand::rng()).unwrap();
 
         let mut og_champions = next_gen
             .clone() // TODO remove if possible. currently doing so because `next_gen` is borrowed as mutable later
@@ -123,7 +123,7 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         // TODO remove clone smh
         let og_champions = next_gen.clone();
@@ -132,7 +132,7 @@ pub mod next_gen {
 
         while next_gen.len() < population_size {
             let e1 = og_champs_cycle.next().unwrap();
-            let e2 = &og_champions[rng.gen_range(0..og_champions.len() - 1)];
+            let e2 = &og_champions[rng.random_range(0..og_champions.len() - 1)];
 
             if e1 == e2 {
                 continue;
@@ -154,7 +154,7 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
-        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+        let mut rng = StdRng::from_rng(rand::rng()).unwrap();
 
         // TODO remove clone smh
         let og_champions = next_gen.clone();
@@ -188,7 +188,7 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
-        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+        let mut rng = StdRng::from_rng(rand::rng()).unwrap();
 
         // TODO remove clone smh
         let og_champions = next_gen.clone();
@@ -219,7 +219,7 @@ pub mod next_gen {
         let population_size = rewards.len();
         let mut next_gen = pruning_helper(rewards);
 
-        let mut rng = StdRng::from_rng(rand::thread_rng()).unwrap();
+        let mut rng = StdRng::from_rng(rand::rng()).unwrap();
 
         // TODO remove clone smh
         let og_champions = next_gen.clone();
@@ -303,7 +303,7 @@ mod tests {
 
     impl RandomlyMutable for MyGenome {
         fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-            self.0 += rng.gen::<f32>() * rate;
+            self.0 += rng.random::<f32>() * rate;
         }
     }
 
@@ -323,7 +323,7 @@ mod tests {
 
     impl GenerateRandom for MyGenome {
         fn gen_random(rng: &mut impl Rng) -> Self {
-            Self(rng.gen())
+            Self(rng.random())
         }
     }
 
@@ -385,7 +385,7 @@ mod tests {
     #[cfg(not(feature = "rayon"))]
     #[test]
     fn scramble() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 1000),
             my_fitness_fn,
@@ -409,7 +409,7 @@ mod tests {
     #[cfg(not(feature = "rayon"))]
     #[test]
     fn d_prune() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 1000),
             my_fitness_fn,
@@ -424,7 +424,7 @@ mod tests {
     #[cfg(all(feature = "crossover", not(feature = "rayon")))]
     #[test]
     fn c_prune() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 100),
@@ -454,7 +454,7 @@ mod tests {
     #[cfg(all(feature = "speciation", not(feature = "rayon")))]
     #[test]
     fn sc_prune() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         let mut sim = GeneticSim::new(
             Vec::gen_random(&mut rng, 100),
