@@ -1,0 +1,22 @@
+name: Publish
+
+on: ['workflow_dispatch']
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        environment: publish
+
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions-rust-lang/setup-rust-toolchain@v1
+              with:
+                toolchain: nightly
+            - name: "Login"
+              run: cargo login --key ${{ secrets.CARGO_TOKEN }}
+            - name: "Publish common"
+              run: cargo +nightly publish -p genetic-rs-common
+            - name: "Publish macros"
+              run: cargo +nightly publish -p genetic-rs-macros
+            - name: "Publish main"
+              run: cargo +nightly publish -p genetic-rs
