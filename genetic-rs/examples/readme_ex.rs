@@ -34,7 +34,9 @@ impl Prunable for MyGenome {
 // helper trait that allows us to use `Vec::gen_random` for the initial population.
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl Rng) -> Self {
-        Self { field1: rng.random() }
+        Self {
+            field1: rng.random(),
+        }
     }
 }
 

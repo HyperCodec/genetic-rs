@@ -10,7 +10,7 @@ pub trait RandomlyMutable {
 
 /// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
 #[cfg(feature = "tracing")]
-pub trait RandomlyMutable : std::fmt::Debug {
+pub trait RandomlyMutable: std::fmt::Debug {
     /// Mutate the genome with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
 }
@@ -25,7 +25,7 @@ pub trait DivisionReproduction {
 
 /// Used in dividually-reproducing [`next_gen`]s
 #[cfg(feature = "tracing")]
-pub trait DivisionReproduction : std::fmt::Debug {
+pub trait DivisionReproduction: std::fmt::Debug {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn divide(&self, rng: &mut impl Rng) -> Self;
@@ -42,7 +42,7 @@ pub trait CrossoverReproduction {
 /// Used in crossover-reproducing [`next_gen`]s
 #[cfg(all(feature = "crossover", feature = "tracing"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait CrossoverReproduction : std::fmt::Debug {
+pub trait CrossoverReproduction: std::fmt::Debug {
     /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self;
 }
@@ -115,7 +115,13 @@ pub mod next_gen {
                 let rate = i as f32 / len;
 
                 #[cfg(feature = "tracing")]
-                let span = span!(Level::DEBUG, "scramble_mutate", index = i, genome = tracing::field::debug(&g), rate = rate);
+                let span = span!(
+                    Level::DEBUG,
+                    "scramble_mutate",
+                    index = i,
+                    genome = tracing::field::debug(&g),
+                    rate = rate
+                );
                 #[cfg(feature = "tracing")]
                 let enter = span.enter();
 
@@ -205,12 +211,17 @@ pub mod next_gen {
             }
 
             #[cfg(feature = "tracing")]
-            let span = span!(Level::DEBUG, "crossover", a = tracing::field::debug(g1), b = tracing::field::debug(g2));
+            let span = span!(
+                Level::DEBUG,
+                "crossover",
+                a = tracing::field::debug(g1),
+                b = tracing::field::debug(g2)
+            );
             #[cfg(feature = "tracing")]
             let enter = span.enter();
 
             next_gen.push(g1.crossover(g2, &mut rng));
-            
+
             #[cfg(feature = "tracing")]
             drop(enter);
         }
@@ -243,14 +254,19 @@ pub mod next_gen {
             if g1 == g2 {
                 continue;
             }
-            
+
             #[cfg(feature = "tracing")]
-            let span = span!(Level::DEBUG, "crossover", a = tracing::field::debug(g1), b = tracing::field::debug(g2));
+            let span = span!(
+                Level::DEBUG,
+                "crossover",
+                a = tracing::field::debug(g1),
+                b = tracing::field::debug(g2)
+            );
             #[cfg(feature = "tracing")]
             let enter = span.enter();
 
             next_gen.push(g1.crossover(g2, &mut rng));
-            
+
             #[cfg(feature = "tracing")]
             drop(enter);
 
@@ -339,7 +355,12 @@ pub mod next_gen {
         let other = same_species[rng.random_range(0..same_species.len())];
 
         #[cfg(feature = "tracing")]
-        let span = span!(Level::DEBUG, "crossover", a = tracing::field::debug(genome), b = tracing::field::debug(other));
+        let span = span!(
+            Level::DEBUG,
+            "crossover",
+            a = tracing::field::debug(genome),
+            b = tracing::field::debug(other)
+        );
         #[cfg(feature = "tracing")]
         let enter = span.enter();
 
@@ -512,11 +533,11 @@ mod tests {
     fn r_scramble() {
         let mut sim = GeneticSim::new(
             Vec::gen_random(1000),
-            #[cfg(not(feature = "crossover"))] 
-            my_fitness_fn, 
+            #[cfg(not(feature = "crossover"))]
+            my_fitness_fn,
             #[cfg(feature = "crossover")]
             my_crossover_fitness_fn,
-            scrambling_nextgen
+            scrambling_nextgen,
         );
 
         sim.perform_generations(100);
