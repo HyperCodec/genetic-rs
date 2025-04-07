@@ -18,6 +18,23 @@ pub mod prelude;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
+#[cfg(feature = "tracing")]
+use tracing::*;
+
+#[cfg(feature = "tracing")]
+#[allow(missing_docs)]
+pub trait Rng: rand::Rng + std::fmt::Debug {}
+
+#[cfg(feature = "tracing")]
+impl<T: rand::Rng + std::fmt::Debug> Rng for T {}
+
+#[cfg(not(feature = "tracing"))]
+#[allow(missing_docs)]
+pub trait Rng: rand::Rng {}
+
+#[cfg(not(feature = "tracing"))]
+impl<T: rand::Rng> Rng for T {}
+
 /// Represents a fitness function. Inputs a reference to the genome and outputs an f32.
 pub trait FitnessFn<G> {
     /// Evaluates a genome's fitness
@@ -53,14 +70,14 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 /// }
 ///
 /// impl RandomlyMutable for MyGenome {
-///     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-///         self.a += rng.gen::<f32>() * rate;
-///         self.b += rng.gen::<f32>() * rate;
+///     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+///         self.a += rng.random::<f32>() * rate;
+///         self.b += rng.random::<f32>() * rate;
 ///     }
 /// }
 ///
 /// impl DivisionReproduction for MyGenome {
-///     fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+///     fn divide(&self, rng: &mut impl Rng) -> Self {
 ///         let mut child = self.clone();
 ///         child.mutate(0.25, rng); // you'll generally want to use a constant mutation rate for mutating children.
 ///         child
@@ -70,7 +87,7 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 /// impl Prunable for MyGenome {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
 ///
 /// impl GenerateRandom for MyGenome {
-///     fn gen_random(rng: &mut impl rand::Rng) -> Self {
+///     fn gen_random(rng: &mut impl Rng) -> Self {
 ///         Self {
 ///             a: rng.gen(),
 ///             b: rng.gen(),
@@ -83,7 +100,7 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 ///         e.a * e.b // should result in genomes increasing their value
 ///     };
 ///
-///     let mut rng = rand::thread_rng();
+///     let mut rng = rand::rng();
 ///
 ///     let mut sim = GeneticSim::new(
 ///         Vec::gen_random(&mut rng, 1000),
@@ -146,17 +163,26 @@ where
     /// Uses the `next_gen` provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
+        #[cfg(feature = "tracing")]
+        let span = span!(Level::TRACE, "next_generation");
+
+        #[cfg(feature = "tracing")]
+        let enter = span.enter();
+
         replace_with_or_abort(&mut self.genomes, |genomes| {
             let rewards = genomes
                 .into_iter()
-                .map(|e| {
-                    let fitness: f32 = self.fitness.fitness(&e);
-                    (e, fitness)
+                .map(|g| {
+                    let fitness: f32 = self.fitness.fitness(&g);
+                    (g, fitness)
                 })
                 .collect();
 
             self.next_gen.next_gen(rewards)
         });
+
+        #[cfg(feature = "tracing")]
+        drop(enter);
     }
 
     /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
@@ -207,9 +233,6 @@ where
     }
 }
 
-#[cfg(feature = "genrand")]
-use rand::prelude::*;
-
 /// Helper trait used in the generation of random starting populations
 #[cfg(feature = "genrand")]
 #[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
@@ -245,6 +268,7 @@ where
     C: FromIterator<T>,
     T: GenerateRandom,
 {
+    #[cfg_attr(feature = "tracing", instrument)]
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
         (0..amount).map(|_| T::gen_random(rng)).collect()
     }
@@ -256,10 +280,11 @@ where
     C: FromParallelIterator<T>,
     T: GenerateRandom + Send,
 {
+    #[cfg_attr(feature = "tracing", instrument)]
     fn gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
-            .map(|_| T::gen_random(&mut rand::thread_rng()))
+            .map(|_| T::gen_random(&mut rand::rng()))
             .collect()
     }
 }

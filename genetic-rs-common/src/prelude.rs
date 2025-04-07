@@ -7,3 +7,5 @@ pub use crate::builtin::*;
 
 #[cfg(feature = "builtin")]
 pub use next_gen::*;
+
+pub use rand::Rng as RandRng;
