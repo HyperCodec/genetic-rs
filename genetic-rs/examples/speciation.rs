@@ -7,14 +7,14 @@ struct MyGenome {
 }
 
 impl RandomlyMutable for MyGenome {
-    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-        self.val1 += rng.gen_range(-1.0..1.0) * rate;
-        self.val2 += rng.gen_range(-1.0..1.0) * rate;
+    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+        self.val1 += rng.random_range(-1.0..1.0) * rate;
+        self.val2 += rng.random_range(-1.0..1.0) * rate;
     }
 }
 
 impl DivisionReproduction for MyGenome {
-    fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+    fn divide(&self, rng: &mut impl Rng) -> Self {
         let mut child = self.clone();
         child.mutate(0.25, rng);
         child
@@ -22,7 +22,7 @@ impl DivisionReproduction for MyGenome {
 }
 
 impl CrossoverReproduction for MyGenome {
-    fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+    fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
         let mut child = Self {
             val1: (self.val1 + other.val1) / 2.,
             val2: (self.val2 + other.val2) / 2.,
@@ -44,8 +44,8 @@ impl Prunable for MyGenome {}
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl rand::Rng) -> Self {
         Self {
-            val1: rng.gen_range(-1.0..1.0),
-            val2: rng.gen_range(-1.0..1.0),
+            val1: rng.random_range(-1.0..1.0),
+            val2: rng.random_range(-1.0..1.0),
         }
     }
 }
@@ -57,7 +57,7 @@ fn fitness(g: &MyGenome) -> f32 {
 
 #[cfg(not(feature = "rayon"))]
 fn main() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),

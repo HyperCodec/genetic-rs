@@ -19,6 +19,9 @@ pub mod prelude;
 use rayon::prelude::*;
 
 #[cfg(feature = "tracing")]
+use tracing::*;
+
+#[cfg(feature = "tracing")]
 #[allow(missing_docs)]
 pub trait Rng: rand::Rng + std::fmt::Debug {}
 
@@ -67,14 +70,14 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 /// }
 ///
 /// impl RandomlyMutable for MyGenome {
-///     fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-///         self.a += rng.gen::<f32>() * rate;
-///         self.b += rng.gen::<f32>() * rate;
+///     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+///         self.a += rng.random::<f32>() * rate;
+///         self.b += rng.random::<f32>() * rate;
 ///     }
 /// }
 ///
 /// impl DivisionReproduction for MyGenome {
-///     fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+///     fn divide(&self, rng: &mut impl Rng) -> Self {
 ///         let mut child = self.clone();
 ///         child.mutate(0.25, rng); // you'll generally want to use a constant mutation rate for mutating children.
 ///         child
@@ -84,7 +87,7 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 /// impl Prunable for MyGenome {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
 ///
 /// impl GenerateRandom for MyGenome {
-///     fn gen_random(rng: &mut impl rand::Rng) -> Self {
+///     fn gen_random(rng: &mut impl Rng) -> Self {
 ///         Self {
 ///             a: rng.gen(),
 ///             b: rng.gen(),
@@ -97,7 +100,7 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 ///         e.a * e.b // should result in genomes increasing their value
 ///     };
 ///
-///     let mut rng = rand::thread_rng();
+///     let mut rng = rand::rng();
 ///
 ///     let mut sim = GeneticSim::new(
 ///         Vec::gen_random(&mut rng, 1000),
@@ -256,6 +259,7 @@ where
     C: FromIterator<T>,
     T: GenerateRandom,
 {
+    #[cfg_attr(feature = "tracing", instrument)]
     fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
         (0..amount).map(|_| T::gen_random(rng)).collect()
     }
@@ -267,10 +271,11 @@ where
     C: FromParallelIterator<T>,
     T: GenerateRandom + Send,
 {
+    #[cfg_attr(feature = "tracing", instrument)]
     fn gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
-            .map(|_| T::gen_random(&mut rand::thread_rng()))
+            .map(|_| T::gen_random(&mut rand::rng()))
             .collect()
     }
 }

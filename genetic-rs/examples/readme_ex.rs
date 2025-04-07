@@ -33,7 +33,7 @@ impl Prunable for MyGenome {
 
 // helper trait that allows us to use `Vec::gen_random` for the initial population.
 impl GenerateRandom for MyGenome {
-    fn gen_random(rng: &mut impl rand::Rng) -> Self {
+    fn gen_random(rng: &mut impl Rng) -> Self {
         Self { field1: rng.random() }
     }
 }
@@ -78,5 +78,5 @@ fn main() {
         sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.randomomes` in between these calls
     }
 
-    dbg!(sim.randomomes);
+    dbg!(sim.genomes);
 }
