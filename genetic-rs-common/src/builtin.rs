@@ -47,8 +47,17 @@ pub trait CrossoverReproduction : std::fmt::Debug {
     fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self;
 }
 
+#[cfg(not(feature = "tracing"))]
 /// Used in pruning [`next_gen`]s
 pub trait Prunable: Sized {
+    /// This does any unfinished work in the despawning process.
+    /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn a genome.
+    fn despawn(self) {}
+}
+
+#[cfg(feature = "tracing")]
+/// Used in pruning [`next_gen`]s
+pub trait Prunable: Sized + std::fmt::Debug {
     /// This does any unfinished work in the despawning process.
     /// It doesn't need to be implemented unless in specific usecases where your algorithm needs to explicitly despawn a genome.
     fn despawn(self) {}
@@ -80,7 +89,7 @@ pub trait Speciated: Sized + std::fmt::Debug {
     }
 }
 
-/// Contains functions used in [`GeneticSim`][crate::GeneticSim].
+/// Provides some basic nextgens for [`GeneticSim`][crate::GeneticSim].
 pub mod next_gen {
     use super::*;
 
@@ -103,7 +112,18 @@ pub mod next_gen {
             .into_iter()
             .enumerate()
             .map(|(i, (mut g, _))| {
-                g.mutate(i as f32 / len, &mut rng);
+                let rate = i as f32 / len;
+
+                #[cfg(feature = "tracing")]
+                let span = span!(Level::DEBUG, "scramble_mutate", index = i, genome = tracing::field::debug(&g), rate = rate);
+                #[cfg(feature = "tracing")]
+                let enter = span.enter();
+
+                g.mutate(rate, &mut rng);
+
+                #[cfg(feature = "tracing")]
+                drop(enter);
+
                 g
             })
             .collect()
@@ -177,14 +197,22 @@ pub mod next_gen {
         let mut og_champs_cycle = og_champions.iter().cycle();
 
         while next_gen.len() < population_size {
-            let e1 = og_champs_cycle.next().unwrap();
-            let e2 = &og_champions[rng.random_range(0..og_champions.len() - 1)];
+            let g1 = og_champs_cycle.next().unwrap();
+            let g2 = &og_champions[rng.random_range(0..og_champions.len() - 1)];
 
-            if e1 == e2 {
+            if g1 == g2 {
                 continue;
             }
 
-            next_gen.push(e1.crossover(e2, &mut rng));
+            #[cfg(feature = "tracing")]
+            let span = span!(Level::DEBUG, "crossover", a = tracing::field::debug(g1), b = tracing::field::debug(g2));
+            #[cfg(feature = "tracing")]
+            let enter = span.enter();
+
+            next_gen.push(g1.crossover(g2, &mut rng));
+            
+            #[cfg(feature = "tracing")]
+            drop(enter);
         }
 
         next_gen
@@ -215,6 +243,16 @@ pub mod next_gen {
             if g1 == g2 {
                 continue;
             }
+            
+            #[cfg(feature = "tracing")]
+            let span = span!(Level::DEBUG, "crossover", a = tracing::field::debug(g1), b = tracing::field::debug(g2));
+            #[cfg(feature = "tracing")]
+            let enter = span.enter();
+
+            next_gen.push(g1.crossover(g2, &mut rng));
+            
+            #[cfg(feature = "tracing")]
+            drop(enter);
 
             next_gen.push(g1.crossover(g2, &mut rng));
         }
@@ -300,15 +338,29 @@ pub mod next_gen {
         // perform crossover reproduction with genomes of the same species
         let other = same_species[rng.random_range(0..same_species.len())];
 
-        genome.crossover(other, rng)
+        #[cfg(feature = "tracing")]
+        let span = span!(Level::DEBUG, "crossover", a = tracing::field::debug(genome), b = tracing::field::debug(other));
+        #[cfg(feature = "tracing")]
+        let enter = span.enter();
+
+        let child = genome.crossover(other, rng);
+
+        #[cfg(feature = "tracing")]
+        drop(enter);
+
+        child
     }
 
-    /// helps with builin pruning nextgens
+    /// helps with builtin pruning nextgens
     #[cfg(not(feature = "rayon"))]
+    #[cfg_attr(feature = "tracing", instrument)]
     fn pruning_helper<E: Prunable + Clone>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
         let median = rewards[rewards.len() / 2].1;
+
+        #[cfg(feature = "tracing")]
+        debug!("median: {median}");
 
         rewards
             .into_iter()
@@ -325,10 +377,14 @@ pub mod next_gen {
 
     /// Rayon version of [`pruning_helper`].
     #[cfg(feature = "rayon")]
+    #[cfg_attr(feature = "tracing", instrument)]
     fn pruning_helper<E: Prunable + Send>(mut rewards: Vec<(E, f32)>) -> Vec<E> {
         rewards.sort_by(|(_, r1), (_, r2)| r1.partial_cmp(r2).unwrap());
 
         let median = rewards[rewards.len() / 2].1;
+
+        #[cfg(feature = "tracing")]
+        debug!("median: {median}");
 
         rewards
             .into_par_iter()

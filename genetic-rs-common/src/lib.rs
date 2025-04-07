@@ -163,17 +163,26 @@ where
     /// Uses the `next_gen` provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
         // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
+        #[cfg(feature = "tracing")]
+        let span = span!(Level::TRACE, "next_generation");
+
+        #[cfg(feature = "tracing")]
+        let enter = span.enter();
+
         replace_with_or_abort(&mut self.genomes, |genomes| {
             let rewards = genomes
                 .into_iter()
-                .map(|e| {
-                    let fitness: f32 = self.fitness.fitness(&e);
-                    (e, fitness)
+                .map(|g| {
+                    let fitness: f32 = self.fitness.fitness(&g);
+                    (g, fitness)
                 })
                 .collect();
 
             self.next_gen.next_gen(rewards)
         });
+
+        #[cfg(feature = "tracing")]
+        drop(enter);
     }
 
     /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
