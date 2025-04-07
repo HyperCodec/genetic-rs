@@ -9,14 +9,14 @@ struct MyGenome {
 
 // required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`.
 impl RandomlyMutable for MyGenome {
-    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
-        self.field1 += rng.gen::<f32>() * rate;
+    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+        self.field1 += rng.random::<f32>() * rate;
     }
 }
 
 // required for `division_pruning_nextgen`.
 impl DivisionReproduction for MyGenome {
-    fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+    fn divide(&self, rng: &mut impl Rng) -> Self {
         let mut child = self.clone();
         child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
         child
@@ -33,8 +33,10 @@ impl Prunable for MyGenome {
 
 // helper trait that allows us to use `Vec::gen_random` for the initial population.
 impl GenerateRandom for MyGenome {
-    fn gen_random(rng: &mut impl rand::Rng) -> Self {
-        Self { field1: rng.gen() }
+    fn gen_random(rng: &mut impl Rng) -> Self {
+        Self {
+            field1: rng.random(),
+        }
     }
 }
 
@@ -46,7 +48,7 @@ fn my_fitness_fn(ent: &MyGenome) -> f32 {
 
 #[cfg(not(feature = "rayon"))]
 fn main() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut sim = GeneticSim::new(
         // you must provide a random starting population.
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
@@ -75,7 +77,7 @@ fn main() {
 
     // perform evolution (100 gens)
     for _ in 0..100 {
-        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.genomes` in between these calls
+        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.randomomes` in between these calls
     }
 
     dbg!(sim.genomes);
