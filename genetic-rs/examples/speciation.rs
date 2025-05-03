@@ -13,21 +13,15 @@ impl RandomlyMutable for MyGenome {
     }
 }
 
-impl DivisionReproduction for MyGenome {
-    fn divide(&self, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(0.25, rng);
-        child
-    }
-}
+impl DivisionReproduction for MyGenome {}
 
 impl CrossoverReproduction for MyGenome {
-    fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
+    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = Self {
             val1: (self.val1 + other.val1) / 2.,
             val2: (self.val2 + other.val2) / 2.,
         };
-        child.mutate(0.25, rng);
+        child.mutate(rate, rng);
         child
     }
 }
@@ -38,8 +32,6 @@ impl Speciated for MyGenome {
         (self.val1 - other.val1).abs() + (self.val2 - other.val2).abs() <= 5.
     }
 }
-
-impl Prunable for MyGenome {}
 
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl rand::Rng) -> Self {

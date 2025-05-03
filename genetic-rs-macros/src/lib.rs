@@ -39,34 +39,10 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(DivisionReproduction)]
 pub fn divrepr_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-
-    let mut inner_divide_return = quote!();
-
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_divide_return
-                        .extend(quote!(#name: genetic_rs_common::prelude::DivisionReproduction::divide(&self.#name, rng),));
-                }
-            }
-            _ => unimplemented!(),
-        }
-    } else {
-        panic!("Cannot derive DivisionReproduction for an enum.");
-    }
-
     let name = &ast.ident;
 
     quote! {
-        impl DivisionReproduction for #name {
-            fn divide(&self, rng: &mut impl genetic_rs_common::Rng) -> Self {
-                Self {
-                    #inner_divide_return
-                }
-            }
-        }
+        impl genetic_rs_common::prelude::DivisionReproduction for #name {}
     }
     .into()
 }
@@ -98,38 +74,6 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
         impl genetic_rs_common::prelude::CrossoverReproduction for #name {
             fn crossover(&self, other: &Self, rng: &mut impl genetic_rs_common::Rng) -> Self {
                 Self { #inner_crossover_return }
-            }
-        }
-    }
-    .into()
-}
-
-#[proc_macro_derive(Prunable)]
-pub fn prunable_derive(input: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(input as DeriveInput);
-
-    let mut inner_despawn = quote!();
-
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_despawn.extend(quote!(genetic_rs_common::prelude::Prunable::despawn(self.#name);));
-                }
-            }
-            _ => unimplemented!(),
-        }
-    } else {
-        panic!("Cannot derive Prunable for an enum.");
-    }
-
-    let name = &ast.ident;
-
-    quote! {
-        impl Prunable for #name {
-            fn despawn(self) {
-                #inner_despawn
             }
         }
     }
