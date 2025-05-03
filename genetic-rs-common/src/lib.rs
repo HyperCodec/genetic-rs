@@ -4,7 +4,6 @@
 
 //! The crate containing the core traits and structs of genetic-rs.
 
-use builtin::repopulator;
 use replace_with::replace_with_or_abort;
 
 /// Built-in nextgen functions and traits to go with them.
@@ -36,73 +35,20 @@ pub trait Rng: rand::Rng {}
 #[cfg(not(feature = "tracing"))]
 impl<T: rand::Rng> Rng for T {}
 
+/// Tests and eliminates the unfit from the simulation.
 pub trait Eliminator<G> {
     /// Tests and eliminates the unfit from the simulation.
     fn eliminate(&self, genomes: Vec<G>) -> Vec<G>;
 }
 
+/// Refills the population of the simulation based on survivors.
 pub trait Repopulator<G> {
     /// Replaces the genomes in the simulation.
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
 }
 
-/// The simulation controller.
-/// ```rust
-/// use genetic_rs_common::prelude::*;
-///
-/// #[derive(Debug, Clone)]
-/// struct MyGenome {
-///     a: f32,
-///     b: f32,
-/// }
-///
-/// impl RandomlyMutable for MyGenome {
-///     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
-///         self.a += rng.random::<f32>() * rate;
-///         self.b += rng.random::<f32>() * rate;
-///     }
-/// }
-///
-/// impl DivisionReproduction for MyGenome {
-///     fn divide(&self, rng: &mut impl Rng) -> Self {
-///         let mut child = self.clone();
-///         child.mutate(0.25, rng); // you'll generally want to use a constant mutation rate for mutating children.
-///         child
-///     }
-/// }
-///
-/// impl Prunable for MyGenome {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
-///
-/// impl GenerateRandom for MyGenome {
-///     fn gen_random(rng: &mut impl Rng) -> Self {
-///         Self {
-///             a: rng.gen(),
-///             b: rng.gen(),
-///         }
-///     }
-/// }
-///
-/// fn main() {
-///     let my_fitness_fn = |e: &MyGenome| {
-///         e.a * e.b // should result in genomes increasing their value
-///     };
-///
-///     let mut rng = rand::rng();
-///
-///     let mut sim = GeneticSim::new(
-///         Vec::gen_random(&mut rng, 1000),
-///         my_fitness_fn,
-///         division_pruning_nextgen,
-///     );
-///
-///     for _ in 0..100 {
-///         // if this were a more complex simulation, you might test genomes in `sim.genomes` between `next_generation` calls to provide a more accurate reward.
-///         sim.next_generation();
-///     }
-///
-///     dbg!(sim.genomes);
-/// }
-/// ```
+/// This struct is the main entry point for the simulation. It handles the state and evolution of the genomes
+/// based on what eliminator and repopulator it receives.
 #[cfg(not(feature = "rayon"))]
 pub struct GeneticSim<
     G: Sized,
@@ -112,7 +58,11 @@ pub struct GeneticSim<
 {
     /// The current population of genomes
     pub genomes: Vec<G>,
+
+    /// The eliminator used to eliminate unfit genomes
     pub eliminator: E,
+
+    /// The repopulator used to refill the population
     pub repopulator: R,
 }
 
