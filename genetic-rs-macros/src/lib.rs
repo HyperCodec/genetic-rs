@@ -28,7 +28,7 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
     let name = &ast.ident;
     quote! {
         impl genetic_rs_common::prelude::RandomlyMutable for #name {
-            fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+            fn mutate(&mut self, rate: f32, rng: &mut impl genetic_rs_common::Rng) {
                 #inner_mutate
             }
         }
@@ -61,7 +61,7 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
 
     quote! {
         impl DivisionReproduction for #name {
-            fn divide(&self, rng: &mut impl rand::Rng) -> Self {
+            fn divide(&self, rng: &mut impl genetic_rs_common::Rng) -> Self {
                 Self {
                     #inner_divide_return
                 }
@@ -96,7 +96,7 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
 
     quote! {
         impl genetic_rs_common::prelude::CrossoverReproduction for #name {
-            fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
+            fn crossover(&self, other: &Self, rng: &mut impl genetic_rs_common::Rng) -> Self {
                 Self { #inner_crossover_return }
             }
         }
@@ -160,7 +160,7 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
     let name = &ast.ident;
     quote! {
         impl GenerateRandom for #name {
-            fn gen_random(rng: &mut impl Rng) -> Self {
+            fn gen_random(rng: &mut impl genetic_rs_common::Rng) -> Self {
                 Self {
                     #genrand_inner_return
                 }

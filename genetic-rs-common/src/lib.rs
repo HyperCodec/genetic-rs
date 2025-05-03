@@ -35,28 +35,14 @@ pub trait Rng: rand::Rng {}
 #[cfg(not(feature = "tracing"))]
 impl<T: rand::Rng> Rng for T {}
 
-/// Represents a fitness function. Inputs a reference to the genome and outputs an f32.
-pub trait FitnessFn<G> {
-    /// Evaluates a genome's fitness
-    fn fitness(&self, genome: &G) -> f32;
+pub trait Eliminator<G> {
+    /// Tests and eliminates the unfit from the simulation.
+    fn eliminate(&self, genomes: Vec<G>) -> Vec<G>;
 }
 
-impl<F: Fn(&G) -> f32, G> FitnessFn<G> for F {
-    fn fitness(&self, genome: &G) -> f32 {
-        (self)(genome)
-    }
-}
-
-/// Represents a nextgen function. Inputs genomes and rewards and produces the next generation
-pub trait NextgenFn<G> {
-    /// Creates the next generation from the current fitness values.
-    fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G>;
-}
-
-impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
-    fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G> {
-        (self)(fitness)
-    }
+pub trait Repopulator<G> {
+    /// Replaces the genomes in the simulation.
+    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
 }
 
 /// The simulation controller.
@@ -117,16 +103,16 @@ impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
 /// }
 /// ```
 #[cfg(not(feature = "rayon"))]
-pub struct GeneticSim<F, NG, G>
+pub struct GeneticSim<G>
 where
-    F: FitnessFn<G>,
-    NG: NextgenFn<G>,
     G: Sized,
+    E: Eliminator<G>,
+    R: Repopulator<G>,
 {
     /// The current population of genomes
     pub genomes: Vec<G>,
-    fitness: F,
-    next_gen: NG,
+    pub eliminator: E,
+    pub repopulator: R,
 }
 
 /// Rayon version of the [`GeneticSim`] struct
@@ -144,10 +130,9 @@ where
 }
 
 #[cfg(not(feature = "rayon"))]
-impl<F, NG, G> GeneticSim<F, NG, G>
+impl<F, NG, G> GeneticSim<F, G>
 where
     F: FitnessFn<G>,
-    NG: NextgenFn<G>,
     G: Sized,
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
