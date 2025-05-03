@@ -53,7 +53,11 @@ fn main() {
     let magic_number = rng.random::<f32>() * 1000.;
     let fitness = move |e: &MyGenome| -> f32 { -(magic_number - e.val).abs() };
 
-    let mut sim = GeneticSim::new(Vec::gen_random(100), fitness, crossover_pruning_nextgen);
+    let mut sim = GeneticSim::new(
+        Vec::gen_random(100),
+        FitnessEliminator::new_with_default(fitness),
+        CrossoverRepopulator::new(0.25), // 25% mutation rate
+    );
 
     for _ in 0..100 {
         sim.next_generation();

@@ -20,7 +20,7 @@ where
 }
 
 /// A fitness-based eliminator that eliminates genomes based on their fitness scores.
-pub struct FitnessEliminator<F: FitnessFn<G>, G> {
+pub struct FitnessEliminator<F: FitnessFn<G>, G: Sized + Send> {
     /// The fitness function used to evaluate genomes.
     pub fitness_fn: F,
 
@@ -30,7 +30,12 @@ pub struct FitnessEliminator<F: FitnessFn<G>, G> {
     _marker: std::marker::PhantomData<G>,
 }
 
-impl<F: FitnessFn<G>, G> FitnessEliminator<F, G> {
+// TODO only require `Send` and `Sync` for `F` when `rayon` is enabled`
+impl<F, G> FitnessEliminator<F, G>
+where
+    F: FitnessFn<G> + Send + Sync,
+    G: Sized + Send + Sync
+{
     /// Creates a new [`FitnessEliminator`] with a given fitness function and threshold.
     /// Panics if the threshold is not between 0.0 and 1.0.
     pub fn new(fitness_fn: F, threshold: f32) -> Self {
@@ -80,7 +85,11 @@ impl<F: FitnessFn<G>, G> FitnessEliminator<F, G> {
     }
 }
 
-impl<F: FitnessFn<G>, G> Eliminator<G> for FitnessEliminator<F, G> {
+impl<F, G> Eliminator<G> for FitnessEliminator<F, G>
+where
+    F: FitnessFn<G> + Send + Sync,
+    G: Sized + Send + Sync
+{
     #[cfg(not(feature = "rayon"))]
     fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);

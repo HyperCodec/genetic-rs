@@ -76,7 +76,11 @@ pub struct GeneticSim<
 {
     /// The current population of genomes
     pub genomes: Vec<G>,
+
+    /// The eliminator used to eliminate unfit genomes
     pub eliminator: E,
+
+    /// The repopulator used to refill the population
     pub repopulator: R,
 }
 
@@ -128,7 +132,7 @@ where
 #[cfg(feature = "rayon")]
 impl<G, E, R> GeneticSim<G, E, R>
 where
-    G: Sized + Send,
+    G: Sized + Send + Sync,
     E: Eliminator<G> + Send + Sync,
     R: Repopulator<G> + Send + Sync,
 {
