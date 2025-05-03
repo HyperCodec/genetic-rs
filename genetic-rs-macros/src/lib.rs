@@ -16,7 +16,7 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
                 for field in named.named.iter() {
                     let name = field.ident.clone().unwrap();
                     inner_mutate
-                        .extend(quote!(RandomlyMutable::mutate(&mut self.#name, rate, rng);));
+                        .extend(quote!(genetic_rs_common::prelude::RandomlyMutable::mutate(&mut self.#name, rate, rng);));
                 }
             }
             _ => unimplemented!(),
@@ -27,8 +27,8 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
 
     let name = &ast.ident;
     quote! {
-        impl RandomlyMutable for #name {
-            fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+        impl genetic_rs_common::prelude::RandomlyMutable for #name {
+            fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
                 #inner_mutate
             }
         }
@@ -48,7 +48,7 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
                 for field in named.named.iter() {
                     let name = field.ident.clone().unwrap();
                     inner_divide_return
-                        .extend(quote!(#name: DivisionReproduction::divide(&self.#name, rng),));
+                        .extend(quote!(#name: genetic_rs_common::prelude::DivisionReproduction::divide(&self.#name, rng),));
                 }
             }
             _ => unimplemented!(),
@@ -61,7 +61,7 @@ pub fn divrepr_derive(input: TokenStream) -> TokenStream {
 
     quote! {
         impl DivisionReproduction for #name {
-            fn divide(&self, rng: &mut impl Rng) -> Self {
+            fn divide(&self, rng: &mut impl rand::Rng) -> Self {
                 Self {
                     #inner_divide_return
                 }
@@ -83,7 +83,7 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
             Fields::Named(named) => {
                 for field in named.named.iter() {
                     let name = field.ident.clone().unwrap();
-                    inner_crossover_return.extend(quote!(#name: CrossoverReproduction::crossover(&self.#name, &other.#name, rng),));
+                    inner_crossover_return.extend(quote!(#name: genetic_rs_common::prelude::CrossoverReproduction::crossover(&self.#name, &other.#name, rng),));
                 }
             }
             _ => unimplemented!(),
@@ -95,8 +95,8 @@ pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
     let name = &ast.ident;
 
     quote! {
-        impl CrossoverReproduction for #name {
-            fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
+        impl genetic_rs_common::prelude::CrossoverReproduction for #name {
+            fn crossover(&self, other: &Self, rng: &mut impl rand::Rng) -> Self {
                 Self { #inner_crossover_return }
             }
         }
@@ -115,7 +115,7 @@ pub fn prunable_derive(input: TokenStream) -> TokenStream {
             Fields::Named(named) => {
                 for field in named.named.iter() {
                     let name = field.ident.clone().unwrap();
-                    inner_despawn.extend(quote!(Prunable::despawn(self.#name);));
+                    inner_despawn.extend(quote!(genetic_rs_common::prelude::Prunable::despawn(self.#name);));
                 }
             }
             _ => unimplemented!(),
@@ -150,7 +150,7 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
                     let name = field.ident.clone().unwrap();
                     let ty = field.ty.clone();
                     genrand_inner_return
-                        .extend(quote!(#name: <#ty as GenerateRandom>::gen_random(rng),));
+                        .extend(quote!(#name: <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),));
                 }
             }
             _ => unimplemented!(),
