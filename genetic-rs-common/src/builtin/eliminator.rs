@@ -34,7 +34,7 @@ impl<F: FitnessFn<G>, G> FitnessEliminator<F, G> {
     /// Creates a new [`FitnessEliminator`] with a given fitness function and threshold.
     /// Panics if the threshold is not between 0.0 and 1.0.
     pub fn new(fitness_fn: F, threshold: f32) -> Self {
-        if threshold < 0.0 || threshold > 1.0 {
+        if !(0.0..=1.0).contains(&threshold) {
             panic!("Threshold must be between 0.0 and 1.0");
         }
         Self {
