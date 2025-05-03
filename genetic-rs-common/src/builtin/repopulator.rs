@@ -16,7 +16,6 @@ pub trait RandomlyMutable: std::fmt::Debug {
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
 }
 
-
 /// Used in dividually-reproducing [`next_gen`]s
 #[cfg(not(feature = "tracing"))]
 pub trait DivisionReproduction: Clone + RandomlyMutable {
@@ -102,7 +101,7 @@ impl<G: DivisionReproduction> DivisionRepopulator<G> {
 
 impl<G> Repopulator<G> for DivisionRepopulator<G>
 where
-    G: DivisionReproduction
+    G: DivisionReproduction,
 {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();

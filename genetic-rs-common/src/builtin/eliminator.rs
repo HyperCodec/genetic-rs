@@ -34,7 +34,7 @@ pub struct FitnessEliminator<F: FitnessFn<G>, G: Sized + Send> {
 impl<F, G> FitnessEliminator<F, G>
 where
     F: FitnessFn<G> + Send + Sync,
-    G: Sized + Send + Sync
+    G: Sized + Send + Sync,
 {
     /// Creates a new [`FitnessEliminator`] with a given fitness function and threshold.
     /// Panics if the threshold is not between 0.0 and 1.0.
@@ -45,7 +45,7 @@ where
         Self {
             fitness_fn,
             threshold,
-            _marker: std::marker::PhantomData
+            _marker: std::marker::PhantomData,
         }
     }
 
@@ -88,7 +88,7 @@ where
 impl<F, G> Eliminator<G> for FitnessEliminator<F, G>
 where
     F: FitnessFn<G> + Send + Sync,
-    G: Sized + Send + Sync
+    G: Sized + Send + Sync,
 {
     #[cfg(not(feature = "rayon"))]
     fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {

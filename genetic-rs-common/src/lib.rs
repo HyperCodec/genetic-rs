@@ -50,12 +50,7 @@ pub trait Repopulator<G> {
 /// This struct is the main entry point for the simulation. It handles the state and evolution of the genomes
 /// based on what eliminator and repopulator it receives.
 #[cfg(not(feature = "rayon"))]
-pub struct GeneticSim<
-    G: Sized,
-    E: Eliminator<G>,
-    R: Repopulator<G>,
->
-{
+pub struct GeneticSim<G: Sized, E: Eliminator<G>, R: Repopulator<G>> {
     /// The current population of genomes
     pub genomes: Vec<G>,
 
@@ -72,8 +67,7 @@ pub struct GeneticSim<
     G: Sized + Sync,
     E: Eliminator<G> + Send + Sync,
     R: Repopulator<G> + Send + Sync,
->
-{
+> {
     /// The current population of genomes
     pub genomes: Vec<G>,
 
@@ -145,7 +139,6 @@ where
             repopulator,
         }
     }
-
 
     /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
