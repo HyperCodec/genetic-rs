@@ -11,14 +11,6 @@ impl RandomlyMutable for TestGene {
     }
 }
 
-impl DivisionReproduction for TestGene {
-    fn divide(&self, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(0.25, rng);
-        child
-    }
-}
-
 #[cfg(feature = "crossover")]
 impl CrossoverReproduction for TestGene {
     fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {

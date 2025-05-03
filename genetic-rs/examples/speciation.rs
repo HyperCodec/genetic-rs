@@ -53,8 +53,8 @@ fn main() {
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
-        fitness,
-        speciated_crossover_pruning_nextgen,
+        FitnessEliminator::new_with_default(fitness),
+        SpeciatedCrossoverRepopulator::new(0.25), // 25% mutation rate
     );
 
     // speciation tends to take more generations (not needed to this extent, but the crate is fast enough to where it isn't much of a compromise)
