@@ -1,2 +1,2 @@
-pub mod eliminators;
+pub mod eliminator;
 pub mod repopulator;

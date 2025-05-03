@@ -7,29 +7,15 @@ struct MyGenome {
     field1: f32,
 }
 
-// required in all of the builtin functions as requirements of `DivisionReproduction` and `CrossoverReproduction`.
+// required in all of the builtin repopulators as requirements of `DivisionReproduction` and `CrossoverReproduction`.
 impl RandomlyMutable for MyGenome {
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
         self.field1 += rng.random::<f32>() * rate;
     }
 }
 
-// required for `division_pruning_nextgen`.
-impl DivisionReproduction for MyGenome {
-    fn divide(&self, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(0.25, rng); // use a constant mutation rate when spawning children in pruning algorithms.
-        child
-    }
-}
-
-// required for the builtin pruning algorithms.
-impl Prunable for MyGenome {
-    fn despawn(self) {
-        // unneccessary to implement this function, but it can be useful for debugging and cleaning up genomes.
-        println!("{:?} died", self);
-    }
-}
+// use auto derives for the builtin nextgen functions to work with your genome.
+impl DivisionReproduction for MyGenome {}
 
 // helper trait that allows us to use `Vec::gen_random` for the initial population.
 impl GenerateRandom for MyGenome {
@@ -54,8 +40,8 @@ fn main() {
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
-        my_fitness_fn,
-        division_pruning_nextgen,
+        FitnessEliminator::new_with_default(my_fitness_fn),
+        DivisionRepopulator::new(0.25), // 25% mutation rate
     );
 
     // perform evolution (100 gens)
@@ -66,19 +52,19 @@ fn main() {
 
 #[cfg(feature = "rayon")]
 fn main() {
+    // the only difference between this and the non-rayon version is that we don't pass in rng.
+
     let mut sim = GeneticSim::new(
         // you must provide a random starting population.
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(100),
-        my_fitness_fn,
-        division_pruning_nextgen,
+        FitnessEliminator::new_with_default(my_fitness_fn),
+        DivisionRepopulator::new(0.25), // 25% mutation rate
     );
 
     // perform evolution (100 gens)
-    for _ in 0..100 {
-        sim.next_generation(); // in a genetic algorithm with state, such as a physics simulation, you'd want to do things with `sim.randomomes` in between these calls
-    }
+    sim.perform_generations(100);
 
     dbg!(sim.genomes);
 }
