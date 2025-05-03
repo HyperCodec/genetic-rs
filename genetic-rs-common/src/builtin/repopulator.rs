@@ -2,6 +2,9 @@ use rand::Rng as RandRng;
 
 use crate::{Repopulator, Rng};
 
+#[cfg(feature = "tracing")]
+use tracing::*;
+
 /// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
 #[cfg(not(feature = "tracing"))]
 pub trait RandomlyMutable {
@@ -157,8 +160,8 @@ where
             let span = span!(
                 Level::DEBUG,
                 "crossover",
-                a = tracing::field::debug(g1),
-                b = tracing::field::debug(g2)
+                a = tracing::field::debug(parent1),
+                b = tracing::field::debug(parent2)
             );
             #[cfg(feature = "tracing")]
             let enter = span.enter();
@@ -216,8 +219,8 @@ where
             let span = span!(
                 Level::DEBUG,
                 "crossover",
-                a = tracing::field::debug(g1),
-                b = tracing::field::debug(g2)
+                a = tracing::field::debug(parent1),
+                b = tracing::field::debug(parent2)
             );
             #[cfg(feature = "tracing")]
             let enter = span.enter();
