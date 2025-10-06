@@ -10,6 +10,7 @@ homepage.workspace = true
 repository.workspace = true
 keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
+include = ["../README.md"]
 
 [features]
 default = ["builtin", "genrand", "crossover"]
