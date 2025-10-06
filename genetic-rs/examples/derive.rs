@@ -12,7 +12,7 @@ impl RandomlyMutable for TestGene {
 }
 
 #[cfg(feature = "crossover")]
-impl CrossoverReproduction for TestGene {
+impl Crossover for TestGene {
     fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
         Self {
             a: (self.a + other.a + rng.random_range(-0.5..0.5)) / 2.,

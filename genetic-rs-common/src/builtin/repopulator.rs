@@ -21,9 +21,8 @@ pub trait RandomlyMutable: std::fmt::Debug {
 
 /// Used in dividually-reproducing [`next_gen`]s
 #[cfg(not(feature = "tracing"))]
-pub trait DivisionReproduction: Clone + RandomlyMutable {
+pub trait Mitosis: Clone + RandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
-    /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn divide(&self, rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = self.clone();
         child.mutate(rate, rng);
@@ -33,7 +32,7 @@ pub trait DivisionReproduction: Clone + RandomlyMutable {
 
 /// Used in dividually-reproducing [`next_gen`]s
 #[cfg(feature = "tracing")]
-pub trait DivisionReproduction: Clone + RandomlyMutable + std::fmt::Debug {
+pub trait Mitosis: Clone + RandomlyMutable + std::fmt::Debug {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
     /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn divide(&self, rate: f32, rng: &mut impl Rng) -> Self {
@@ -46,7 +45,7 @@ pub trait DivisionReproduction: Clone + RandomlyMutable + std::fmt::Debug {
 /// Used in crossover-reproducing [`next_gen`]s
 #[cfg(all(feature = "crossover", not(feature = "tracing")))]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait CrossoverReproduction: Clone {
+pub trait Crossover: Clone {
     /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
 }
@@ -54,7 +53,7 @@ pub trait CrossoverReproduction: Clone {
 /// Used in crossover-reproducing [`next_gen`]s
 #[cfg(all(feature = "crossover", feature = "tracing"))]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait CrossoverReproduction: Clone + std::fmt::Debug {
+pub trait Crossover: Clone + std::fmt::Debug {
     /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
 }
@@ -86,14 +85,14 @@ pub trait Speciated: Sized + std::fmt::Debug {
 }
 
 /// Repopulator that uses division reproduction to create new genomes.
-pub struct DivisionRepopulator<G: DivisionReproduction> {
+pub struct MitosisRepopulator<G: Mitosis> {
     /// The mutation rate to use when mutating genomes. 0.0 - 1.0
     pub mutation_rate: f32,
     _marker: std::marker::PhantomData<G>,
 }
 
-impl<G: DivisionReproduction> DivisionRepopulator<G> {
-    /// Creates a new [`DivisionRepopulator`].
+impl<G: Mitosis> MitosisRepopulator<G> {
+    /// Creates a new [`MitosisRepopulator`].
     pub fn new(mutation_rate: f32) -> Self {
         Self {
             mutation_rate,
@@ -102,9 +101,9 @@ impl<G: DivisionReproduction> DivisionRepopulator<G> {
     }
 }
 
-impl<G> Repopulator<G> for DivisionRepopulator<G>
+impl<G> Repopulator<G> for MitosisRepopulator<G>
 where
-    G: DivisionReproduction,
+    G: Mitosis,
 {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();
@@ -121,13 +120,13 @@ where
 }
 
 /// Repopulator that uses crossover reproduction to create new genomes.
-pub struct CrossoverRepopulator<G: CrossoverReproduction + PartialEq> {
+pub struct CrossoverRepopulator<G: Crossover + PartialEq> {
     /// The mutation rate to use when mutating genomes. 0.0 - 1.0
     pub mutation_rate: f32,
     _marker: std::marker::PhantomData<G>,
 }
 
-impl<G: CrossoverReproduction + PartialEq> CrossoverRepopulator<G> {
+impl<G: Crossover + PartialEq> CrossoverRepopulator<G> {
     /// Creates a new [`CrossoverRepopulator`].
     pub fn new(mutation_rate: f32) -> Self {
         Self {
@@ -139,7 +138,7 @@ impl<G: CrossoverReproduction + PartialEq> CrossoverRepopulator<G> {
 
 impl<G> Repopulator<G> for CrossoverRepopulator<G>
 where
-    G: CrossoverReproduction + PartialEq,
+    G: Crossover + PartialEq,
 {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();
@@ -178,14 +177,14 @@ where
 
 /// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
 #[cfg(feature = "speciation")]
-pub struct SpeciatedCrossoverRepopulator<G: CrossoverReproduction + Speciated + PartialEq> {
+pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated + PartialEq> {
     /// The mutation rate to use when mutating genomes. 0.0 - 1.0
     pub mutation_rate: f32,
     _marker: std::marker::PhantomData<G>,
 }
 
 #[cfg(feature = "speciation")]
-impl<G: CrossoverReproduction + Speciated + PartialEq> SpeciatedCrossoverRepopulator<G> {
+impl<G: Crossover + Speciated + PartialEq> SpeciatedCrossoverRepopulator<G> {
     /// Creates a new [`SpeciatedCrossoverRepopulator`].
     pub fn new(mutation_rate: f32) -> Self {
         Self {
@@ -198,7 +197,7 @@ impl<G: CrossoverReproduction + Speciated + PartialEq> SpeciatedCrossoverRepopul
 #[cfg(feature = "speciation")]
 impl<G> Repopulator<G> for SpeciatedCrossoverRepopulator<G>
 where
-    G: CrossoverReproduction + Speciated + PartialEq,
+    G: Crossover + Speciated + PartialEq,
 {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();

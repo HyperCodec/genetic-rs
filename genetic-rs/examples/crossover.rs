@@ -11,7 +11,7 @@ impl RandomlyMutable for MyGenome {
     }
 }
 
-impl CrossoverReproduction for MyGenome {
+impl Crossover for MyGenome {
     fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = Self {
             val: (self.val + other.val) / 2.,
