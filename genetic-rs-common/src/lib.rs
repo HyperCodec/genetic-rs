@@ -45,10 +45,33 @@ pub trait Repopulator<G> {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
 }
 
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
+#[cfg(not(feature = "rayon"))]
+pub trait FeatureBoundedEliminator<G>: Eliminator<G> {}
+#[cfg(not(feature = "rayon"))]
+impl<G, T: Eliminator<G>> FeatureBoundedEliminator<G> for T {}
+
+#[cfg(feature = "rayon")]
+pub trait FeatureBoundedEliminator<G>: Eliminator<G> + Send + Sync {}
+#[cfg(feature = "rayon")]
+impl<G, T: Eliminator<G> + Send + Sync> FeatureBoundedEliminator<G> for T {}
+
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
+#[cfg(not(feature = "rayon"))]
+pub trait FeatureBoundedRepopulator<G>: Repopulator<G> {}
+#[cfg(not(feature = "rayon"))]
+impl<G, T: Repopulator<G>> FeatureBoundedRepopulator<G> for T {}
+
+#[cfg(feature = "rayon")]
+pub trait FeatureBoundedRepopulator<G>: Repopulator<G> + Send + Sync {}
+#[cfg(feature = "rayon")]
+impl<G, T: Repopulator<G> + Send + Sync> FeatureBoundedRepopulator<G> for T {}
+
 /// This struct is the main entry point for the simulation. It handles the state and evolution of the genomes
 /// based on what eliminator and repopulator it receives.
-#[cfg(not(feature = "rayon"))]
-pub struct GeneticSim<G: Sized, E: Eliminator<G>, R: Repopulator<G>> {
+pub struct GeneticSim<G: Sized, E: FeatureBoundedEliminator<G>, R: FeatureBoundedRepopulator<G>> {
     /// The current population of genomes
     pub genomes: Vec<G>,
 
@@ -59,29 +82,11 @@ pub struct GeneticSim<G: Sized, E: Eliminator<G>, R: Repopulator<G>> {
     pub repopulator: R,
 }
 
-/// Rayon version of the [`GeneticSim`] struct
-#[cfg(feature = "rayon")]
-pub struct GeneticSim<
-    G: Sized + Sync,
-    E: Eliminator<G> + Send + Sync,
-    R: Repopulator<G> + Send + Sync,
-> {
-    /// The current population of genomes
-    pub genomes: Vec<G>,
-
-    /// The eliminator used to eliminate unfit genomes
-    pub eliminator: E,
-
-    /// The repopulator used to refill the population
-    pub repopulator: R,
-}
-
-#[cfg(not(feature = "rayon"))]
 impl<G, E, R> GeneticSim<G, E, R>
 where
     G: Sized,
-    E: Eliminator<G>,
-    R: Repopulator<G>,
+    E: FeatureBoundedEliminator<G>,
+    R: FeatureBoundedRepopulator<G>,
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
@@ -103,48 +108,6 @@ where
 
         let genomes = std::mem::take(&mut self.genomes);
 
-        let target_size = genomes.len();
-        self.genomes = self.eliminator.eliminate(genomes);
-        self.repopulator.repopulate(&mut self.genomes, target_size);
-
-        #[cfg(feature = "tracing")]
-        drop(enter);
-    }
-
-    /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
-    pub fn perform_generations(&mut self, count: usize) {
-        for _ in 0..count {
-            self.next_generation();
-        }
-    }
-}
-
-#[cfg(feature = "rayon")]
-impl<G, E, R> GeneticSim<G, E, R>
-where
-    G: Sized + Send + Sync,
-    E: Eliminator<G> + Send + Sync,
-    R: Repopulator<G> + Send + Sync,
-{
-    /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
-    /// a given fitness function, and a given nextgen function.
-    pub fn new(starting_genomes: Vec<G>, eliminator: E, repopulator: R) -> Self {
-        Self {
-            genomes: starting_genomes,
-            eliminator,
-            repopulator,
-        }
-    }
-
-    /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
-    pub fn next_generation(&mut self) {
-        #[cfg(feature = "tracing")]
-        let span = span!(Level::TRACE, "next_generation");
-
-        #[cfg(feature = "tracing")]
-        let enter = span.enter();
-
-        let genomes = std::mem::take(&mut self.genomes);
         let target_size = genomes.len();
         self.genomes = self.eliminator.eliminate(genomes);
         self.repopulator.repopulate(&mut self.genomes, target_size);
