@@ -143,17 +143,16 @@ where
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();
         let champions = genomes.clone();
-        let mut champs_cycle = champions.iter().cycle();
+        let mut champs_cycle = champions.iter().enumerate().cycle();
 
         // TODO maybe rayonify
         while genomes.len() < target_size {
-            let parent1 = champs_cycle.next().unwrap();
-            let mut parent2 = &champions[rng.random_range(0..champions.len() - 1)];
-
-            while parent1 == parent2 {
-                // TODO bad way to do this, but it works for now
-                parent2 = &champions[rng.random_range(0..champions.len() - 1)];
+            let (i, parent1) = champs_cycle.next().unwrap();
+            let mut j = rng.random_range(1..champions.len());
+            if i == j {
+                j = 0;
             }
+            let parent2 = &genomes[j];
 
             #[cfg(feature = "tracing")]
             let span = span!(
