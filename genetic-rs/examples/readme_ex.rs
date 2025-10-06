@@ -7,7 +7,7 @@ struct MyGenome {
     field1: f32,
 }
 
-// required in all of the builtin repopulators as requirements of `DivisionReproduction` and `CrossoverReproduction`.
+// required in all of the builtin repopulators as requirements of `Mitosis` and `Crossover`.
 impl RandomlyMutable for MyGenome {
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
         self.field1 += rng.random::<f32>() * rate;
@@ -15,7 +15,7 @@ impl RandomlyMutable for MyGenome {
 }
 
 // use auto derives for the builtin nextgen functions to work with your genome.
-impl DivisionReproduction for MyGenome {}
+impl Mitosis for MyGenome {}
 
 // helper trait that allows us to use `Vec::gen_random` for the initial population.
 impl GenerateRandom for MyGenome {
@@ -41,7 +41,7 @@ fn main() {
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
         FitnessEliminator::new_with_default(my_fitness_fn),
-        DivisionRepopulator::new(0.25), // 25% mutation rate
+        MitosisRepopulator::new(0.25), // 25% mutation rate
     );
 
     // perform evolution (100 gens)
@@ -60,7 +60,7 @@ fn main() {
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(100),
         FitnessEliminator::new_with_default(my_fitness_fn),
-        DivisionRepopulator::new(0.25), // 25% mutation rate
+        MitosisRepopulator::new(0.25), // 25% mutation rate
     );
 
     // perform evolution (100 gens)

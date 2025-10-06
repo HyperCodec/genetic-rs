@@ -35,7 +35,7 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
 
             quote! {
                 impl genetic_rs_common::prelude::RandomlyMutable for #name {
-                    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+                    fn mutate(&mut self, rate: f32, rng: &mut impl genetic_rs_common::Rng) {
                         #inner
                     }
                 }
@@ -51,7 +51,7 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
     }
 }
 
-#[proc_macro_derive(DivisionReproduction)]
+#[proc_macro_derive(Mitosis)]
 pub fn mitosis_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = &ast.ident;
@@ -95,7 +95,7 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
             if tuple_struct {
                 quote! {
                     impl genetic_rs_common::prelude::Crossover for #name {
-                        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl rand::Rng) -> Self {
+                        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl genetic_rs_common::Rng) -> Self {
                             Self(#inner)
                         }
                     }
@@ -103,7 +103,7 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     impl genetic_rs_common::prelude::Crossover for #name {
-                        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl rand::Rng) -> Self {
+                        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl genetic_rs_common::Rng) -> Self {
                             Self {
                                 #inner
                             }
@@ -153,7 +153,7 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
             if tuple_struct {
                 quote! {
                     impl genetic_rs_common::prelude::GenerateRandom for #name {
-                        fn gen_random(rng: &mut impl rand::Rng) -> Self {
+                        fn gen_random(rng: &mut impl genetic_rs_common::Rng) -> Self {
                             Self(#inner)
                         }
                     }
@@ -162,7 +162,7 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
             } else {
                 quote! {
                     impl genetic_rs_common::prelude::GenerateRandom for #name {
-                        fn gen_random(rng: &mut impl rand::Rng) -> Self {
+                        fn gen_random(rng: &mut impl genetic_rs_common::Rng) -> Self {
                             Self {
                                 #inner
                             }
