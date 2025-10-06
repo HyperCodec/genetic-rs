@@ -1,5 +1,6 @@
 #![allow(clippy::needless_doctest_main)]
-#![doc = include_str!("../../README.md")]
+#![cfg_attr(publish, doc = include_str!(env!("CARGO_PKG_README")))]
+#![cfg_attr(not(publish), doc = include_str!(concat!("../", env!("CARGO_PKG_README"))))]
 
 pub mod prelude {
     pub use genetic_rs_common::prelude::*;
