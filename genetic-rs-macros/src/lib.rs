@@ -61,7 +61,7 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
             let mut inner = Vec::new();
             let mut tuple_struct = false;
 
-            for (i, field) in s.fields.iter().enumerate() {
+            for (i, field) in s.fields.into_iter().enumerate() {
                 let ty = field.ty;
                 let span = ty.span();
 
