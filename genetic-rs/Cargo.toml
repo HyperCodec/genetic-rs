@@ -10,7 +10,6 @@ homepage.workspace = true
 repository.workspace = true
 keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
-include = ["../README.md"]
 
 [features]
 default = ["builtin", "genrand", "crossover"]
@@ -25,6 +24,9 @@ tracing = ["genetic-rs-common/tracing"]
 [dependencies]
 genetic-rs-common = { path = "../genetic-rs-common", version = "1.0.0" }
 genetic-rs-macros = { path = "../genetic-rs-macros", version = "1.0.0", optional = true }
+
+[lints.rust]
+unexpected-cfgs = {level = "allow", check-cfg = ["cfg(publish)"]}
 
 [dev-dependencies]
 rand = "0.9.2"

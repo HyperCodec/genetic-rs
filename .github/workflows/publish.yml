@@ -17,4 +17,4 @@ jobs:
             - name: "Publish macros"
               run: cargo +nightly publish -p genetic-rs-macros --token ${{ secrets.CARGO_TOKEN }}
             - name: "Publish main"
-              run: cargo +nightly publish -p genetic-rs --token ${{ secrets.CARGO_TOKEN }}
+              run: cargo +nightly publish -p genetic-rs --cfg publish --token ${{ secrets.CARGO_TOKEN }}
