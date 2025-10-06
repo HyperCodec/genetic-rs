@@ -18,6 +18,8 @@ pub trait FeatureBoundedRandomlyMutable: RandomlyMutable {}
 #[cfg(not(feature = "tracing"))]
 impl<T: RandomlyMutable> FeatureBoundedRandomlyMutable for T {}
 
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
 #[cfg(feature = "tracing")]
 pub trait FeatureBoundedRandomlyMutable: RandomlyMutable + std::fmt::Debug {}
 #[cfg(feature = "tracing")]
