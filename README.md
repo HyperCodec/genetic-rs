@@ -4,7 +4,7 @@
 [<img alt="crates.io" src="https://img.shields.io/crates/d/genetic-rs" height="20">](https://crates.io/crates/genetic-rs)
 [<img alt="docs.rs" src="https://img.shields.io/docsrs/genetic-rs" height="20">](https://docs.rs/genetic-rs)
 
-A small crate for quickstarting genetic algorithm projects.
+A small framework for managing genetic algorithms.
 
 ### Features
 First off, this crate comes with the `builtin`, `crossover`, and `genrand` features by default. If you want it to be parallelized (which is true in most cases), you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.

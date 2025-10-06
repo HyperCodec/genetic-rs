@@ -1,6 +1,6 @@
 [package]
 name = "genetic-rs"
-description = "A small crate for quickstarting genetic algorithm projects"
+description = "A small framework for managing genetic algorithms"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
