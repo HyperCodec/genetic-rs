@@ -34,7 +34,7 @@ fn main() {
     let mut rng = rand::rng();
 
     let magic_number = rng.random::<f32>() * 1000.;
-    let fitness = move |e: &MyGenome| -> f32 { -(magic_number - e.val).abs() };
+    let fitness = move |e: &MyGenome| -> f32 { 1 / (magic_number - e.val).abs().max(1e-7) };
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
