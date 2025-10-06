@@ -69,6 +69,20 @@ pub trait FeatureBoundedRepopulator<G>: Repopulator<G> + Send + Sync {}
 #[cfg(feature = "rayon")]
 impl<G, T: Repopulator<G> + Send + Sync> FeatureBoundedRepopulator<G> for T {}
 
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
+#[cfg(not(feature = "rayon"))]
+pub trait FeatureBoundedGenome {}
+#[cfg(not(feature = "rayon"))]
+impl<T> FeatureBoundedGenome for T {}
+
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
+#[cfg(feature = "rayon")]
+pub trait FeatureBoundedGenome: Sized + Send + Sync {}
+#[cfg(feature = "rayon")]
+impl<T: Sized + Send + Sync> FeatureBoundedGenome for T {}
+
 /// This struct is the main entry point for the simulation. It handles the state and evolution of the genomes
 /// based on what eliminator and repopulator it receives.
 pub struct GeneticSim<G: Sized, E: FeatureBoundedEliminator<G>, R: FeatureBoundedRepopulator<G>> {

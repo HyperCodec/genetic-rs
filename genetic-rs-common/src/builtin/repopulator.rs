@@ -6,35 +6,27 @@ use crate::{Repopulator, Rng};
 use tracing::*;
 
 /// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
-#[cfg(not(feature = "tracing"))]
 pub trait RandomlyMutable {
     /// Mutate the genome with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
 }
 
-/// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
-#[cfg(feature = "tracing")]
-pub trait RandomlyMutable: std::fmt::Debug {
-    /// Mutate the genome with a given mutation rate (0..1)
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
-}
-
-/// Used in dividually-reproducing [`next_gen`]s
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
 #[cfg(not(feature = "tracing"))]
-pub trait Mitosis: Clone + RandomlyMutable {
-    /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
-    fn divide(&self, rate: f32, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(rate, rng);
-        child
-    }
-}
+pub trait FeatureBoundedRandomlyMutable: RandomlyMutable {}
+#[cfg(not(feature = "tracing"))]
+impl<T: RandomlyMutable> FeatureBoundedRandomlyMutable for T {}
 
-/// Used in dividually-reproducing [`next_gen`]s
 #[cfg(feature = "tracing")]
-pub trait Mitosis: Clone + RandomlyMutable + std::fmt::Debug {
+pub trait FeatureBoundedRandomlyMutable: RandomlyMutable + std::fmt::Debug {}
+#[cfg(feature = "tracing")]
+impl<T: RandomlyMutable + std::fmt::Debug> FeatureBoundedRandomlyMutable for T {}
+
+
+/// Used in dividually-reproducing [`Repopulator`]s
+pub trait Mitosis: Clone + FeatureBoundedRandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
-    /// If it is simply returning a cloned and mutated version, consider using a constant mutation rate.
     fn divide(&self, rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = self.clone();
         child.mutate(rate, rng);
@@ -45,7 +37,7 @@ pub trait Mitosis: Clone + RandomlyMutable + std::fmt::Debug {
 /// Used in crossover-reproducing [`next_gen`]s
 #[cfg(all(feature = "crossover", not(feature = "tracing")))]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait Crossover: Clone {
+pub trait Crossover: Clone + PartialEq {
     /// Use crossover reproduction to create a new genome.
     fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
 }
@@ -59,7 +51,7 @@ pub trait Crossover: Clone + std::fmt::Debug {
 }
 
 /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
-#[cfg(all(feature = "speciation", not(feature = "tracing")))]
+#[cfg(feature = "speciation")]
 #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
 pub trait Speciated: Sized {
     /// Calculates whether two genomes are similar enough to be considered part of the same species.
@@ -67,19 +59,6 @@ pub trait Speciated: Sized {
 
     /// Filters a list of genomes based on whether they are of the same species.
     fn filter_same_species<'a>(&'a self, genomes: &'a [Self]) -> Vec<&'a Self> {
-        genomes.iter().filter(|g| self.is_same_species(g)).collect()
-    }
-}
-
-/// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
-#[cfg(all(feature = "speciation", feature = "tracing"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
-pub trait Speciated: Sized + std::fmt::Debug {
-    /// Calculates whether two genomes are similar enough to be considered part of the same species.
-    fn is_same_species(&self, other: &Self) -> bool;
-
-    /// Filters a list of genomes based on whether they are of the same species.
-    fn filter_same_species<'a>(&self, genomes: &'a [Self]) -> Vec<&'a Self> {
         genomes.iter().filter(|g| self.is_same_species(g)).collect()
     }
 }
@@ -120,13 +99,13 @@ where
 }
 
 /// Repopulator that uses crossover reproduction to create new genomes.
-pub struct CrossoverRepopulator<G: Crossover + PartialEq> {
+pub struct CrossoverRepopulator<G: Crossover> {
     /// The mutation rate to use when mutating genomes. 0.0 - 1.0
     pub mutation_rate: f32,
     _marker: std::marker::PhantomData<G>,
 }
 
-impl<G: Crossover + PartialEq> CrossoverRepopulator<G> {
+impl<G: Crossover> CrossoverRepopulator<G> {
     /// Creates a new [`CrossoverRepopulator`].
     pub fn new(mutation_rate: f32) -> Self {
         Self {
@@ -138,7 +117,7 @@ impl<G: Crossover + PartialEq> CrossoverRepopulator<G> {
 
 impl<G> Repopulator<G> for CrossoverRepopulator<G>
 where
-    G: Crossover + PartialEq,
+    G: Crossover,
 {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();

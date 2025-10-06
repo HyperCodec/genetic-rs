@@ -1,4 +1,5 @@
 use crate::Eliminator;
+use crate::FeatureBoundedGenome;
 
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
@@ -19,8 +20,22 @@ where
     }
 }
 
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
+#[cfg(not(feature = "rayon"))]
+pub trait FeatureBoundedFitnessFn<G: FeatureBoundedGenome>: FitnessFn<G> {}
+#[cfg(not(feature = "rayon"))]
+impl<G: FeatureBoundedGenome, T: FitnessFn<G>> FeatureBoundedFitnessFn<G> for T {}
+
+/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
+/// It is blanket implemented, so you should never have to reference this directly.
+#[cfg(feature = "rayon")]
+pub trait FeatureBoundedFitnessFn<G: FeatureBoundedGenome>: FitnessFn<G> + Send + Sync {}
+#[cfg(feature = "rayon")]
+impl<G: FeatureBoundedGenome, T: FitnessFn<G> + Send + Sync> FeatureBoundedFitnessFn<G> for T {}
+
 /// A fitness-based eliminator that eliminates genomes based on their fitness scores.
-pub struct FitnessEliminator<F: FitnessFn<G>, G: Sized + Send> {
+pub struct FitnessEliminator<F: FitnessFn<G>, G: FeatureBoundedGenome> {
     /// The fitness function used to evaluate genomes.
     pub fitness_fn: F,
 
@@ -30,11 +45,10 @@ pub struct FitnessEliminator<F: FitnessFn<G>, G: Sized + Send> {
     _marker: std::marker::PhantomData<G>,
 }
 
-// TODO only require `Send` and `Sync` for `F` when `rayon` is enabled`
 impl<F, G> FitnessEliminator<F, G>
 where
-    F: FitnessFn<G> + Send + Sync,
-    G: Sized + Send + Sync,
+    F: FeatureBoundedFitnessFn<G>,
+    G: FeatureBoundedGenome,
 {
     /// Creates a new [`FitnessEliminator`] with a given fitness function and threshold.
     /// Panics if the threshold is not between 0.0 and 1.0.
@@ -87,8 +101,8 @@ where
 
 impl<F, G> Eliminator<G> for FitnessEliminator<F, G>
 where
-    F: FitnessFn<G> + Send + Sync,
-    G: Sized + Send + Sync,
+    F: FeatureBoundedFitnessFn<G>,
+    G: FeatureBoundedGenome,
 {
     #[cfg(not(feature = "rayon"))]
     fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
