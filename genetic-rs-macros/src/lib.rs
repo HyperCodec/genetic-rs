@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{parse_macro_input, Data, DeriveInput};
 use quote::quote_spanned;
 use syn::spanned::Spanned;
 
@@ -10,32 +10,44 @@ use syn::spanned::Spanned;
 pub fn randmut_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    let mut inner_mutate = quote!();
+    let name = ast.ident;
 
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_mutate
-                        .extend(quote!(genetic_rs_common::prelude::RandomlyMutable::mutate(&mut self.#name, rate, rng);));
+    match ast.data {
+        Data::Struct(s) => {
+            let mut inner = Vec::new();
+
+            for (i, field) in s.fields.into_iter().enumerate() {
+                let ty = field.ty;
+                let span = ty.span();
+
+                if let Some(field_name) = field.ident {
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, rate, rng);
+                    });
+                } else {
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, rate, rng);
+                    });
                 }
             }
-            _ => unimplemented!(),
-        }
-    } else {
-        panic!("Cannot derive RandomlyMutable for an enum.");
-    }
 
-    let name = &ast.ident;
-    quote! {
-        impl genetic_rs_common::prelude::RandomlyMutable for #name {
-            fn mutate(&mut self, rate: f32, rng: &mut impl genetic_rs_common::Rng) {
-                #inner_mutate
-            }
-        }
+            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
+
+            quote! {
+                impl genetic_rs_common::prelude::RandomlyMutable for #name {
+                    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng) {
+                        #inner
+                    }
+                }
+            }.into()
+        },
+        Data::Enum(_e) => {
+            panic!("enums not yet supported");
+        },
+        Data::Union(_u) => {
+            panic!("unions not yet supported");
+        },
     }
-    .into()
 }
 
 #[proc_macro_derive(DivisionReproduction)]
@@ -44,7 +56,7 @@ pub fn mitosis_derive(input: TokenStream) -> TokenStream {
     let name = &ast.ident;
 
     quote! {
-        impl genetic_rs_common::prelude::DivisionReproduction for #name {}
+        impl genetic_rs_common::prelude::Mitosis for #name {}
     }
     .into()
 }
@@ -67,12 +79,12 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
 
                 if let Some(field_name) = field.ident {
                     inner.push(quote_spanned! {span=>
-                        #field_name: <#ty as Crossover>::crossover(&self.#field_name, &other.#field_name, rate, rng),
+                        #field_name: <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#field_name, &other.#field_name, rate, rng),
                     });
                 } else {
                     tuple_struct = true;
                     inner.push(quote_spanned! {span=>
-                        <#ty as Crossover>::crossover(&self.#i, &other.#i, rate, rng),
+                        <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#i, &other.#i, rate, rng),
                     });
                 }
             }
@@ -81,7 +93,7 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
 
             if tuple_struct {
                 quote! {
-                    impl Crossover for #name {
+                    impl genetic_rs_common::prelude::Crossover for #name {
                         fn crossover(&self, other: &Self, rate: f32, rng: &mut impl rand::Rng) -> Self {
                             Self(#inner)
                         }
@@ -89,7 +101,7 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
                 }.into()
             } else {
                 quote! {
-                    impl Crossover for #name {
+                    impl genetic_rs_common::prelude::Crossover for #name {
                         fn crossover(&self, other: &Self, rate: f32, rng: &mut impl rand::Rng) -> Self {
                             Self {
                                 #inner
@@ -126,12 +138,12 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
                 
                 if let Some(field_name) = field.ident {
                     inner.push(quote_spanned! {span=> 
-                        #field_name: <#ty as GenerateRandom>::gen_random(rng),
+                        #field_name: <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
                     });
                 } else {
                     tuple_struct = true;
                     inner.push(quote_spanned! {span=>
-                        <#ty as GenerateRandom>::gen_random(rng),
+                        <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
                     });
                 }
             }
@@ -139,7 +151,7 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
             let inner: proc_macro2::TokenStream = inner.into_iter().collect();
             if tuple_struct {
                 quote! {
-                    impl GenerateRandom for #name {
+                    impl genetic_rs_common::prelude::GenerateRandom for #name {
                         fn gen_random(rng: &mut impl rand::Rng) -> Self {
                             Self(#inner)
                         }
@@ -147,7 +159,7 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
                 }.into()
             } else {
                 quote! {
-                    impl GenerateRandom for #name {
+                    impl genetic_rs_common::prelude::GenerateRandom for #name {
                         fn gen_random(rng: &mut impl rand::Rng) -> Self {
                             Self {
                                 #inner
