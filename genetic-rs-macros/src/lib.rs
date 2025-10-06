@@ -2,138 +2,123 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use quote::quote_spanned;
+use syn::spanned::Spanned;
+use syn::{parse_macro_input, Data, DeriveInput};
 
 #[proc_macro_derive(RandomlyMutable)]
 pub fn randmut_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    let mut inner_mutate = quote!();
+    let name = ast.ident;
 
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_mutate
-                        .extend(quote!(RandomlyMutable::mutate(&mut self.#name, rate, rng);));
+    match ast.data {
+        Data::Struct(s) => {
+            let mut inner = Vec::new();
+
+            for (i, field) in s.fields.into_iter().enumerate() {
+                let ty = field.ty;
+                let span = ty.span();
+
+                if let Some(field_name) = field.ident {
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, rate, rng);
+                    });
+                } else {
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, rate, rng);
+                    });
                 }
             }
-            _ => unimplemented!(),
-        }
-    } else {
-        panic!("Cannot derive RandomlyMutable for an enum.");
-    }
 
-    let name = &ast.ident;
-    quote! {
-        impl RandomlyMutable for #name {
-            fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
-                #inner_mutate
+            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
+
+            quote! {
+                impl genetic_rs_common::prelude::RandomlyMutable for #name {
+                    fn mutate(&mut self, rate: f32, rng: &mut impl genetic_rs_common::Rng) {
+                        #inner
+                    }
+                }
             }
+            .into()
+        }
+        Data::Enum(_e) => {
+            panic!("enums not yet supported");
+        }
+        Data::Union(_u) => {
+            panic!("unions not yet supported");
         }
     }
-    .into()
 }
 
-#[proc_macro_derive(DivisionReproduction)]
-pub fn divrepr_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Mitosis)]
+pub fn mitosis_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-
-    let mut inner_divide_return = quote!();
-
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_divide_return
-                        .extend(quote!(#name: DivisionReproduction::divide(&self.#name, rng),));
-                }
-            }
-            _ => unimplemented!(),
-        }
-    } else {
-        panic!("Cannot derive DivisionReproduction for an enum.");
-    }
-
     let name = &ast.ident;
 
     quote! {
-        impl DivisionReproduction for #name {
-            fn divide(&self, rng: &mut impl Rng) -> Self {
-                Self {
-                    #inner_divide_return
-                }
-            }
-        }
+        impl genetic_rs_common::prelude::Mitosis for #name {}
     }
     .into()
 }
 
 #[cfg(feature = "crossover")]
-#[proc_macro_derive(CrossoverReproduction)]
-pub fn cross_repr_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Crossover)]
+pub fn crossover_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    let mut inner_crossover_return = quote!();
+    let name = ast.ident;
 
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_crossover_return.extend(quote!(#name: CrossoverReproduction::crossover(&self.#name, &other.#name, rng),));
+    match ast.data {
+        Data::Struct(s) => {
+            let mut inner = Vec::new();
+            let mut tuple_struct = false;
+
+            for (i, field) in s.fields.into_iter().enumerate() {
+                let ty = field.ty;
+                let span = ty.span();
+
+                if let Some(field_name) = field.ident {
+                    inner.push(quote_spanned! {span=>
+                        #field_name: <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#field_name, &other.#field_name, rate, rng),
+                    });
+                } else {
+                    tuple_struct = true;
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#i, &other.#i, rate, rng),
+                    });
                 }
             }
-            _ => unimplemented!(),
-        }
-    } else {
-        panic!("Cannot derive CrossoverReproduction for an enum.");
-    }
 
-    let name = &ast.ident;
+            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
 
-    quote! {
-        impl CrossoverReproduction for #name {
-            fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
-                Self { #inner_crossover_return }
+            if tuple_struct {
+                quote! {
+                    impl genetic_rs_common::prelude::Crossover for #name {
+                        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl genetic_rs_common::Rng) -> Self {
+                            Self(#inner)
+                        }
+                    }
+                }.into()
+            } else {
+                quote! {
+                    impl genetic_rs_common::prelude::Crossover for #name {
+                        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl genetic_rs_common::Rng) -> Self {
+                            Self {
+                                #inner
+                            }
+                        }
+                    }
+                }.into()
             }
         }
-    }
-    .into()
-}
-
-#[proc_macro_derive(Prunable)]
-pub fn prunable_derive(input: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(input as DeriveInput);
-
-    let mut inner_despawn = quote!();
-
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    inner_despawn.extend(quote!(Prunable::despawn(self.#name);));
-                }
-            }
-            _ => unimplemented!(),
+        Data::Enum(_e) => {
+            panic!("enums not yet supported");
         }
-    } else {
-        panic!("Cannot derive Prunable for an enum.");
-    }
-
-    let name = &ast.ident;
-
-    quote! {
-        impl Prunable for #name {
-            fn despawn(self) {
-                #inner_despawn
-            }
+        Data::Union(_u) => {
+            panic!("unions not yet supported");
         }
     }
-    .into()
 }
 
 #[cfg(feature = "genrand")]
@@ -141,31 +126,57 @@ pub fn prunable_derive(input: TokenStream) -> TokenStream {
 pub fn genrand_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    let mut genrand_inner_return = quote!();
+    let name = ast.ident;
 
-    if let Data::Struct(data) = ast.data {
-        match &data.fields {
-            Fields::Named(named) => {
-                for field in named.named.iter() {
-                    let name = field.ident.clone().unwrap();
-                    let ty = field.ty.clone();
-                    genrand_inner_return
-                        .extend(quote!(#name: <#ty as GenerateRandom>::gen_random(rng),));
+    match ast.data {
+        Data::Struct(s) => {
+            let mut inner = Vec::new();
+            let mut tuple_struct = false;
+
+            for field in s.fields {
+                let ty = field.ty;
+                let span = ty.span();
+
+                if let Some(field_name) = field.ident {
+                    inner.push(quote_spanned! {span=>
+                        #field_name: <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
+                    });
+                } else {
+                    tuple_struct = true;
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
+                    });
                 }
             }
-            _ => unimplemented!(),
-        }
-    }
 
-    let name = &ast.ident;
-    quote! {
-        impl GenerateRandom for #name {
-            fn gen_random(rng: &mut impl Rng) -> Self {
-                Self {
-                    #genrand_inner_return
+            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
+            if tuple_struct {
+                quote! {
+                    impl genetic_rs_common::prelude::GenerateRandom for #name {
+                        fn gen_random(rng: &mut impl genetic_rs_common::Rng) -> Self {
+                            Self(#inner)
+                        }
+                    }
                 }
+                .into()
+            } else {
+                quote! {
+                    impl genetic_rs_common::prelude::GenerateRandom for #name {
+                        fn gen_random(rng: &mut impl genetic_rs_common::Rng) -> Self {
+                            Self {
+                                #inner
+                            }
+                        }
+                    }
+                }
+                .into()
             }
         }
+        Data::Enum(_e) => {
+            panic!("enums not yet supported");
+        }
+        Data::Union(_u) => {
+            panic!("unions not yet supported");
+        }
     }
-    .into()
 }

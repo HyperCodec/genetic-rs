@@ -60,7 +60,6 @@ version = "0.6.0"
 dependencies = [
  "rand 0.9.0",
  "rayon",
- "replace_with",
  "tracing",
 ]
 
@@ -224,12 +223,6 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
 ]
-
-[[package]]
-name = "replace_with"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3a8614ee435691de62bcffcf4a66d91b3594bf1428a5722e79103249a095690"
 
 [[package]]
 name = "syn"

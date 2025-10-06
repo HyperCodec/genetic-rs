@@ -13,21 +13,15 @@ impl RandomlyMutable for MyGenome {
     }
 }
 
-impl DivisionReproduction for MyGenome {
-    fn divide(&self, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(0.25, rng);
-        child
-    }
-}
+impl Mitosis for MyGenome {}
 
-impl CrossoverReproduction for MyGenome {
-    fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
+impl Crossover for MyGenome {
+    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = Self {
             val1: (self.val1 + other.val1) / 2.,
             val2: (self.val2 + other.val2) / 2.,
         };
-        child.mutate(0.25, rng);
+        child.mutate(rate, rng);
         child
     }
 }
@@ -38,8 +32,6 @@ impl Speciated for MyGenome {
         (self.val1 - other.val1).abs() + (self.val2 - other.val2).abs() <= 5.
     }
 }
-
-impl Prunable for MyGenome {}
 
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl rand::Rng) -> Self {
@@ -61,11 +53,10 @@ fn main() {
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
-        fitness,
-        speciated_crossover_pruning_nextgen,
+        FitnessEliminator::new_with_default(fitness),
+        SpeciatedCrossoverRepopulator::new(0.25), // 25% mutation rate
     );
 
-    // speciation tends to take more generations (not needed to this extent, but the crate is fast enough to where it isn't much of a compromise)
     sim.perform_generations(100);
 
     dbg!(sim.genomes);
@@ -75,13 +66,11 @@ fn main() {
 fn main() {
     let mut sim = GeneticSim::new(
         Vec::gen_random(100),
-        fitness,
-        speciated_crossover_pruning_nextgen,
+        FitnessEliminator::new_with_default(fitness),
+        SpeciatedCrossoverRepopulator::new(0.25), // 25% mutation rate
     );
 
-    for _ in 0..1000 {
-        sim.next_generation();
-    }
+    sim.perform_generations(100);
 
     dbg!(sim.genomes);
 }

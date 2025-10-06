@@ -11,17 +11,15 @@ impl RandomlyMutable for MyGenome {
     }
 }
 
-impl CrossoverReproduction for MyGenome {
-    fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
+impl Crossover for MyGenome {
+    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = Self {
             val: (self.val + other.val) / 2.,
         };
-        child.mutate(0.25, rng);
+        child.mutate(rate, rng);
         child
     }
 }
-
-impl Prunable for MyGenome {}
 
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl Rng) -> Self {
@@ -35,13 +33,13 @@ impl GenerateRandom for MyGenome {
 fn main() {
     let mut rng = rand::rng();
 
-    let magic_number = rng.gen::<f32>() * 1000.;
+    let magic_number = rng.random::<f32>() * 1000.;
     let fitness = move |e: &MyGenome| -> f32 { -(magic_number - e.val).abs() };
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
-        fitness,
-        crossover_pruning_nextgen,
+        FitnessEliminator::new_with_default(fitness),
+        CrossoverRepopulator::new(0.25), // 25% mutation rate
     );
 
     sim.perform_generations(100);
@@ -55,7 +53,11 @@ fn main() {
     let magic_number = rng.random::<f32>() * 1000.;
     let fitness = move |e: &MyGenome| -> f32 { -(magic_number - e.val).abs() };
 
-    let mut sim = GeneticSim::new(Vec::gen_random(100), fitness, crossover_pruning_nextgen);
+    let mut sim = GeneticSim::new(
+        Vec::gen_random(100),
+        FitnessEliminator::new_with_default(fitness),
+        CrossoverRepopulator::new(0.25), // 25% mutation rate
+    );
 
     for _ in 0..100 {
         sim.next_generation();

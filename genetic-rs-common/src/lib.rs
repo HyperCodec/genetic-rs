@@ -4,8 +4,6 @@
 
 //! The crate containing the core traits and structs of genetic-rs.
 
-use replace_with::replace_with_or_abort;
-
 /// Built-in nextgen functions and traits to go with them.
 #[cfg_attr(docsrs, doc(cfg(feature = "builtin")))]
 #[cfg(feature = "builtin")]
@@ -35,151 +33,79 @@ pub trait Rng: rand::Rng {}
 #[cfg(not(feature = "tracing"))]
 impl<T: rand::Rng> Rng for T {}
 
-/// Represents a fitness function. Inputs a reference to the genome and outputs an f32.
-pub trait FitnessFn<G> {
-    /// Evaluates a genome's fitness
-    fn fitness(&self, genome: &G) -> f32;
+/// Tests and eliminates the unfit from the simulation.
+pub trait Eliminator<G> {
+    /// Tests and eliminates the unfit from the simulation.
+    fn eliminate(&self, genomes: Vec<G>) -> Vec<G>;
 }
 
-impl<F: Fn(&G) -> f32, G> FitnessFn<G> for F {
-    fn fitness(&self, genome: &G) -> f32 {
-        (self)(genome)
-    }
+/// Refills the population of the simulation based on survivors.
+pub trait Repopulator<G> {
+    /// Replaces the genomes in the simulation.
+    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
 }
 
-/// Represents a nextgen function. Inputs genomes and rewards and produces the next generation
-pub trait NextgenFn<G> {
-    /// Creates the next generation from the current fitness values.
-    fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G>;
-}
-
-impl<F: Fn(Vec<(G, f32)>) -> Vec<G>, G> NextgenFn<G> for F {
-    fn next_gen(&self, fitness: Vec<(G, f32)>) -> Vec<G> {
-        (self)(fitness)
-    }
-}
-
-/// The simulation controller.
-/// ```rust
-/// use genetic_rs_common::prelude::*;
-///
-/// #[derive(Debug, Clone)]
-/// struct MyGenome {
-///     a: f32,
-///     b: f32,
-/// }
-///
-/// impl RandomlyMutable for MyGenome {
-///     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
-///         self.a += rng.random::<f32>() * rate;
-///         self.b += rng.random::<f32>() * rate;
-///     }
-/// }
-///
-/// impl DivisionReproduction for MyGenome {
-///     fn divide(&self, rng: &mut impl Rng) -> Self {
-///         let mut child = self.clone();
-///         child.mutate(0.25, rng); // you'll generally want to use a constant mutation rate for mutating children.
-///         child
-///     }
-/// }
-///
-/// impl Prunable for MyGenome {} // if we wanted to, we could implement the `despawn` function to run any cleanup code as needed. in this example, though, we do not need it.
-///
-/// impl GenerateRandom for MyGenome {
-///     fn gen_random(rng: &mut impl Rng) -> Self {
-///         Self {
-///             a: rng.gen(),
-///             b: rng.gen(),
-///         }
-///     }
-/// }
-///
-/// fn main() {
-///     let my_fitness_fn = |e: &MyGenome| {
-///         e.a * e.b // should result in genomes increasing their value
-///     };
-///
-///     let mut rng = rand::rng();
-///
-///     let mut sim = GeneticSim::new(
-///         Vec::gen_random(&mut rng, 1000),
-///         my_fitness_fn,
-///         division_pruning_nextgen,
-///     );
-///
-///     for _ in 0..100 {
-///         // if this were a more complex simulation, you might test genomes in `sim.genomes` between `next_generation` calls to provide a more accurate reward.
-///         sim.next_generation();
-///     }
-///
-///     dbg!(sim.genomes);
-/// }
-/// ```
+/// This struct is the main entry point for the simulation. It handles the state and evolution of the genomes
+/// based on what eliminator and repopulator it receives.
 #[cfg(not(feature = "rayon"))]
-pub struct GeneticSim<F, NG, G>
-where
-    F: FitnessFn<G>,
-    NG: NextgenFn<G>,
-    G: Sized,
-{
+pub struct GeneticSim<G: Sized, E: Eliminator<G>, R: Repopulator<G>> {
     /// The current population of genomes
     pub genomes: Vec<G>,
-    fitness: F,
-    next_gen: NG,
+
+    /// The eliminator used to eliminate unfit genomes
+    pub eliminator: E,
+
+    /// The repopulator used to refill the population
+    pub repopulator: R,
 }
 
 /// Rayon version of the [`GeneticSim`] struct
 #[cfg(feature = "rayon")]
-pub struct GeneticSim<F, NG, G>
-where
-    F: FitnessFn<G> + Send + Sync,
-    NG: NextgenFn<G> + Send + Sync,
-    G: Sized + Send,
-{
+pub struct GeneticSim<
+    G: Sized + Sync,
+    E: Eliminator<G> + Send + Sync,
+    R: Repopulator<G> + Send + Sync,
+> {
     /// The current population of genomes
     pub genomes: Vec<G>,
-    fitness: F,
-    next_gen: NG,
+
+    /// The eliminator used to eliminate unfit genomes
+    pub eliminator: E,
+
+    /// The repopulator used to refill the population
+    pub repopulator: R,
 }
 
 #[cfg(not(feature = "rayon"))]
-impl<F, NG, G> GeneticSim<F, NG, G>
+impl<G, E, R> GeneticSim<G, E, R>
 where
-    F: FitnessFn<G>,
-    NG: NextgenFn<G>,
     G: Sized,
+    E: Eliminator<G>,
+    R: Repopulator<G>,
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
-    pub fn new(starting_genomes: Vec<G>, fitness: F, next_gen: NG) -> Self {
+    pub fn new(starting_genomes: Vec<G>, eliminator: E, repopulator: R) -> Self {
         Self {
             genomes: starting_genomes,
-            fitness,
-            next_gen,
+            eliminator,
+            repopulator,
         }
     }
 
-    /// Uses the `next_gen` provided in [`GeneticSim::new`] to create the next generation of genomes.
+    /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
-        // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         #[cfg(feature = "tracing")]
         let span = span!(Level::TRACE, "next_generation");
 
         #[cfg(feature = "tracing")]
         let enter = span.enter();
 
-        replace_with_or_abort(&mut self.genomes, |genomes| {
-            let rewards = genomes
-                .into_iter()
-                .map(|g| {
-                    let fitness: f32 = self.fitness.fitness(&g);
-                    (g, fitness)
-                })
-                .collect();
+        let genomes = std::mem::take(&mut self.genomes);
 
-            self.next_gen.next_gen(rewards)
-        });
+        let target_size = genomes.len();
+        self.genomes = self.eliminator.eliminate(genomes);
+        self.repopulator.repopulate(&mut self.genomes, target_size);
 
         #[cfg(feature = "tracing")]
         drop(enter);
@@ -194,35 +120,37 @@ where
 }
 
 #[cfg(feature = "rayon")]
-impl<F, NG, G> GeneticSim<F, NG, G>
+impl<G, E, R> GeneticSim<G, E, R>
 where
-    F: FitnessFn<G> + Send + Sync,
-    NG: NextgenFn<G> + Send + Sync,
-    G: Sized + Send,
+    G: Sized + Send + Sync,
+    E: Eliminator<G> + Send + Sync,
+    R: Repopulator<G> + Send + Sync,
 {
     /// Creates a [`GeneticSim`] with a given population of `starting_genomes` (the size of which will be retained),
     /// a given fitness function, and a given nextgen function.
-    pub fn new(starting_genomes: Vec<G>, fitness: F, next_gen: NG) -> Self {
+    pub fn new(starting_genomes: Vec<G>, eliminator: E, repopulator: R) -> Self {
         Self {
             genomes: starting_genomes,
-            fitness,
-            next_gen,
+            eliminator,
+            repopulator,
         }
     }
 
-    /// Performs selection and produces the next generation within the simulation.
+    /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
-        replace_with_or_abort(&mut self.genomes, |genomes| {
-            let rewards = genomes
-                .into_par_iter()
-                .map(|e| {
-                    let fitness: f32 = self.fitness.fitness(&e);
-                    (e, fitness)
-                })
-                .collect();
+        #[cfg(feature = "tracing")]
+        let span = span!(Level::TRACE, "next_generation");
 
-            self.next_gen.next_gen(rewards)
-        });
+        #[cfg(feature = "tracing")]
+        let enter = span.enter();
+
+        let genomes = std::mem::take(&mut self.genomes);
+        let target_size = genomes.len();
+        self.genomes = self.eliminator.eliminate(genomes);
+        self.repopulator.repopulate(&mut self.genomes, target_size);
+
+        #[cfg(feature = "tracing")]
+        drop(enter);
     }
 
     /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
@@ -286,21 +214,5 @@ where
             .into_par_iter()
             .map(|_| T::gen_random(&mut rand::rng()))
             .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::prelude::*;
-
-    #[test]
-    fn send_sim() {
-        let mut sim = GeneticSim::new(vec![()], |_: &()| 0., |_: Vec<((), f32)>| vec![()]);
-
-        let h = std::thread::spawn(move || {
-            sim.next_generation();
-        });
-
-        h.join().unwrap();
     }
 }
