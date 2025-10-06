@@ -4,8 +4,6 @@
 
 //! The crate containing the core traits and structs of genetic-rs.
 
-use replace_with::replace_with_or_abort;
-
 /// Built-in nextgen functions and traits to go with them.
 #[cfg_attr(docsrs, doc(cfg(feature = "builtin")))]
 #[cfg(feature = "builtin")]
@@ -97,19 +95,17 @@ where
 
     /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
-        // TODO maybe remove unneccessary dependency, can prob use std::mem::replace
         #[cfg(feature = "tracing")]
         let span = span!(Level::TRACE, "next_generation");
 
         #[cfg(feature = "tracing")]
         let enter = span.enter();
 
-        replace_with_or_abort(&mut self.genomes, |genomes| {
-            let target_size = genomes.len();
-            let mut new_genomes = self.eliminator.eliminate(genomes);
-            self.repopulator.repopulate(&mut new_genomes, target_size);
-            new_genomes
-        });
+        let genomes = std::mem::take(&mut self.genomes);
+
+        let target_size = genomes.len();
+        self.genomes = self.eliminator.eliminate(genomes);
+        self.repopulator.repopulate(&mut self.genomes, target_size);
 
         #[cfg(feature = "tracing")]
         drop(enter);
