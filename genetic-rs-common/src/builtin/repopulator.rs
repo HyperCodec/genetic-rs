@@ -5,7 +5,7 @@ use crate::{Repopulator, Rng};
 #[cfg(feature = "tracing")]
 use tracing::*;
 
-/// Used in all of the builtin [`next_gen`]s to randomly mutate genomes a given amount
+/// Used in other traits to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
     /// Mutate the genome with a given mutation rate (0..1)
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
@@ -35,7 +35,7 @@ pub trait Mitosis: Clone + FeatureBoundedRandomlyMutable {
     }
 }
 
-/// Used in crossover-reproducing [`next_gen`]s
+/// Used in crossover-reproducing [`Repopulator`]s
 #[cfg(all(feature = "crossover", not(feature = "tracing")))]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
 pub trait Crossover: Clone + PartialEq {
