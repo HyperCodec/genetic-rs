@@ -23,7 +23,6 @@ pub trait FeatureBoundedRandomlyMutable: RandomlyMutable + std::fmt::Debug {}
 #[cfg(feature = "tracing")]
 impl<T: RandomlyMutable + std::fmt::Debug> FeatureBoundedRandomlyMutable for T {}
 
-
 /// Used in dividually-reproducing [`Repopulator`]s
 pub trait Mitosis: Clone + FeatureBoundedRandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
