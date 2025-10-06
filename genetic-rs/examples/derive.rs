@@ -11,19 +11,11 @@ impl RandomlyMutable for TestGene {
     }
 }
 
-impl DivisionReproduction for TestGene {
-    fn divide(&self, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(0.25, rng);
-        child
-    }
-}
-
 #[cfg(feature = "crossover")]
-impl CrossoverReproduction for TestGene {
-    fn crossover(&self, other: &Self, rng: &mut impl Rng) -> Self {
+impl Crossover for TestGene {
+    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
         Self {
-            a: (self.a + other.a + rng.random_range(-0.5..0.5)) / 2.,
+            a: (self.a + other.a + rng.random_range(-1.0..1.0) * rate) / 2.,
         }
     }
 }
@@ -37,8 +29,8 @@ impl GenerateRandom for TestGene {
 }
 
 // using the derive macros here is only useful if the fields are not related to each other
-#[derive(RandomlyMutable, DivisionReproduction, GenerateRandom, Clone, Debug)]
-#[cfg_attr(feature = "crossover", derive(CrossoverReproduction))]
+#[derive(RandomlyMutable, Mitosis, GenerateRandom, Clone, Debug)]
+#[cfg_attr(feature = "crossover", derive(Crossover))]
 struct MyDNA {
     g1: TestGene,
     g2: TestGene,
