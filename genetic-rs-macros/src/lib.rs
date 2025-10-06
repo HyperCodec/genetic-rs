@@ -2,9 +2,9 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput};
 use quote::quote_spanned;
 use syn::spanned::Spanned;
+use syn::{parse_macro_input, Data, DeriveInput};
 
 #[proc_macro_derive(RandomlyMutable)]
 pub fn randmut_derive(input: TokenStream) -> TokenStream {
@@ -39,14 +39,15 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
                         #inner
                     }
                 }
-            }.into()
-        },
+            }
+            .into()
+        }
         Data::Enum(_e) => {
             panic!("enums not yet supported");
-        },
+        }
         Data::Union(_u) => {
             panic!("unions not yet supported");
-        },
+        }
     }
 }
 
@@ -110,13 +111,13 @@ pub fn crossover_derive(input: TokenStream) -> TokenStream {
                     }
                 }.into()
             }
-        },
+        }
         Data::Enum(_e) => {
             panic!("enums not yet supported");
-        },
+        }
         Data::Union(_u) => {
             panic!("unions not yet supported");
-        },
+        }
     }
 }
 
@@ -135,9 +136,9 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
             for field in s.fields {
                 let ty = field.ty;
                 let span = ty.span();
-                
+
                 if let Some(field_name) = field.ident {
-                    inner.push(quote_spanned! {span=> 
+                    inner.push(quote_spanned! {span=>
                         #field_name: <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
                     });
                 } else {
@@ -156,7 +157,8 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
                             Self(#inner)
                         }
                     }
-                }.into()
+                }
+                .into()
             } else {
                 quote! {
                     impl genetic_rs_common::prelude::GenerateRandom for #name {
@@ -166,12 +168,13 @@ pub fn genrand_derive(input: TokenStream) -> TokenStream {
                             }
                         }
                     }
-                }.into()
+                }
+                .into()
             }
-        },
+        }
         Data::Enum(_e) => {
             panic!("enums not yet supported");
-        },
+        }
         Data::Union(_u) => {
             panic!("unions not yet supported");
         }
