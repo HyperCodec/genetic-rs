@@ -12,11 +12,9 @@ jobs:
             - uses: actions-rust-lang/setup-rust-toolchain@v1
               with:
                 toolchain: nightly
-            - name: "Login"
-              run: cargo login --key ${{ secrets.CARGO_TOKEN }}
             - name: "Publish common"
-              run: cargo +nightly publish -p genetic-rs-common
+              run: cargo +nightly publish -p genetic-rs-common --token ${{ secrets.CARGO_TOKEN }}
             - name: "Publish macros"
-              run: cargo +nightly publish -p genetic-rs-macros
+              run: cargo +nightly publish -p genetic-rs-macros --token ${{ secrets.CARGO_TOKEN }}
             - name: "Publish main"
-              run: cargo +nightly publish -p genetic-rs
+              run: cargo +nightly publish -p genetic-rs --token ${{ secrets.CARGO_TOKEN }}

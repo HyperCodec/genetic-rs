@@ -7,13 +7,13 @@
 A small crate for quickstarting genetic algorithm projects.
 
 ### Features
-First off, this crate comes with the `builtin`, `crossover`, and `genrand` features by default. If you want it to be parallelized, you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.
+First off, this crate comes with the `builtin`, `crossover`, and `genrand` features by default. If you want it to be parallelized (which is true in most cases), you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.
 
 ### How to Use
 > [!NOTE] 
 > If you are interested in implementing NEAT with this, try out the [neat](https://crates.io/crates/neat) crate
 
-Here's a simple genetic algorithm.
+Here's a simple genetic algorithm:
 
 ```rust
 use genetic_rs::prelude::*;
