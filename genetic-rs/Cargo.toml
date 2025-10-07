@@ -19,7 +19,6 @@ speciation = ["crossover", "genetic-rs-common/speciation"]
 genrand = ["genetic-rs-common/genrand"]
 rayon = ["genetic-rs-common/rayon"]
 derive = ["dep:genetic-rs-macros", "genetic-rs-common/builtin"]
-tracing = ["genetic-rs-common/tracing"]
 
 [dependencies]
 genetic-rs-common = { path = "../genetic-rs-common", version = "1.0.0" }

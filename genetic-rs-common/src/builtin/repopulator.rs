@@ -1,34 +1,17 @@
 use rand::Rng as RandRng;
 
-use crate::{Repopulator, Rng};
-
-#[cfg(feature = "tracing")]
-use tracing::*;
+use crate::Repopulator;
 
 /// Used in other traits to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
     /// Mutate the genome with a given mutation rate (0..1)
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
+    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng);
 }
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
-#[cfg(not(feature = "tracing"))]
-pub trait FeatureBoundedRandomlyMutable: RandomlyMutable {}
-#[cfg(not(feature = "tracing"))]
-impl<T: RandomlyMutable> FeatureBoundedRandomlyMutable for T {}
-
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
-#[cfg(feature = "tracing")]
-pub trait FeatureBoundedRandomlyMutable: RandomlyMutable + std::fmt::Debug {}
-#[cfg(feature = "tracing")]
-impl<T: RandomlyMutable + std::fmt::Debug> FeatureBoundedRandomlyMutable for T {}
-
 /// Used in dividually-reproducing [`Repopulator`]s
-pub trait Mitosis: Clone + FeatureBoundedRandomlyMutable {
+pub trait Mitosis: Clone + RandomlyMutable {
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
-    fn divide(&self, rate: f32, rng: &mut impl Rng) -> Self {
+    fn divide(&self, rate: f32, rng: &mut impl rand::Rng) -> Self {
         let mut child = self.clone();
         child.mutate(rate, rng);
         child
@@ -36,19 +19,11 @@ pub trait Mitosis: Clone + FeatureBoundedRandomlyMutable {
 }
 
 /// Used in crossover-reproducing [`Repopulator`]s
-#[cfg(all(feature = "crossover", not(feature = "tracing")))]
+#[cfg(feature = "crossover")]
 #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait Crossover: Clone + PartialEq {
+pub trait Crossover: Clone {
     /// Use crossover reproduction to create a new genome.
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
-}
-
-/// Used in crossover-reproducing [`next_gen`]s
-#[cfg(all(feature = "crossover", feature = "tracing"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait Crossover: Clone + std::fmt::Debug {
-    /// Use crossover reproduction to create a new genome.
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
+    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
@@ -134,20 +109,7 @@ where
             }
             let parent2 = &genomes[j];
 
-            #[cfg(feature = "tracing")]
-            let span = span!(
-                Level::DEBUG,
-                "crossover",
-                a = tracing::field::debug(parent1),
-                b = tracing::field::debug(parent2)
-            );
-            #[cfg(feature = "tracing")]
-            let enter = span.enter();
-
             let child = parent1.crossover(parent2, self.mutation_rate, &mut rng);
-
-            #[cfg(feature = "tracing")]
-            drop(enter);
 
             genomes.push(child);
         }
@@ -193,20 +155,7 @@ where
                 parent2 = &champions[rng.random_range(0..champions.len() - 1)];
             }
 
-            #[cfg(feature = "tracing")]
-            let span = span!(
-                Level::DEBUG,
-                "crossover",
-                a = tracing::field::debug(parent1),
-                b = tracing::field::debug(parent2)
-            );
-            #[cfg(feature = "tracing")]
-            let enter = span.enter();
-
             let child = parent1.crossover(parent2, self.mutation_rate, &mut rng);
-
-            #[cfg(feature = "tracing")]
-            drop(enter);
 
             genomes.push(child);
         }
