@@ -5,4 +5,4 @@ pub use crate::*;
 #[cfg(feature = "builtin")]
 pub use crate::builtin::{eliminator::*, repopulator::*};
 
-pub use rand::Rng as RandRng;
+pub use rand::prelude::*;

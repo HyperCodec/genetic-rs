@@ -16,23 +16,6 @@ pub mod prelude;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-#[cfg(feature = "tracing")]
-use tracing::*;
-
-#[cfg(feature = "tracing")]
-#[allow(missing_docs)]
-pub trait Rng: rand::Rng + std::fmt::Debug {}
-
-#[cfg(feature = "tracing")]
-impl<T: rand::Rng + std::fmt::Debug> Rng for T {}
-
-#[cfg(not(feature = "tracing"))]
-#[allow(missing_docs)]
-pub trait Rng: rand::Rng {}
-
-#[cfg(not(feature = "tracing"))]
-impl<T: rand::Rng> Rng for T {}
-
 /// Tests and eliminates the unfit from the simulation.
 pub trait Eliminator<G> {
     /// Tests and eliminates the unfit from the simulation.
@@ -118,20 +101,11 @@ where
 
     /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
-        #[cfg(feature = "tracing")]
-        let span = span!(Level::TRACE, "next_generation");
-
-        #[cfg(feature = "tracing")]
-        let enter = span.enter();
-
         let genomes = std::mem::take(&mut self.genomes);
 
         let target_size = genomes.len();
         self.genomes = self.eliminator.eliminate(genomes);
         self.repopulator.repopulate(&mut self.genomes, target_size);
-
-        #[cfg(feature = "tracing")]
-        drop(enter);
     }
 
     /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
@@ -147,7 +121,7 @@ where
 #[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandom {
     /// Create a completely random instance of the genome
-    fn gen_random(rng: &mut impl Rng) -> Self;
+    fn gen_random(rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Blanket trait used on collections that contain objects implementing [`GenerateRandom`]
@@ -158,7 +132,7 @@ where
     T: GenerateRandom,
 {
     /// Generate a random collection of the inner objects with a given amount
-    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
+    fn gen_random(rng: &mut impl rand::Rng, amount: usize) -> Self;
 }
 
 /// Rayon version of the [`GenerateRandomCollection`] trait
@@ -177,8 +151,7 @@ where
     C: FromIterator<T>,
     T: GenerateRandom,
 {
-    #[cfg_attr(feature = "tracing", instrument)]
-    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
+    fn gen_random(rng: &mut impl rand::Rng, amount: usize) -> Self {
         (0..amount).map(|_| T::gen_random(rng)).collect()
     }
 }
@@ -189,7 +162,6 @@ where
     C: FromParallelIterator<T>,
     T: GenerateRandom + Send,
 {
-    #[cfg_attr(feature = "tracing", instrument)]
     fn gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
