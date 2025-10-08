@@ -27,14 +27,14 @@ struct MyGenome {
 // required in all of the builtin Repopulators as requirements of `Mitosis` and `Crossover`
 impl RandomlyMutable for MyGenome {
     fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
-        self.field1 += rng.gen::<f32>() * rate;
+        self.field1 += rng.random::<f32>() * rate;
     }
 }
 
 // allows us to use `Vec::gen_random` for the initial population. note that `Vec::gen_random` has a slightly different function signature depending on whether the `rayon` feature is enabled.
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl Rng) -> Self {
-        Self { field1: rng.gen() }
+        Self { field1: rng.random() }
     }
 }
 

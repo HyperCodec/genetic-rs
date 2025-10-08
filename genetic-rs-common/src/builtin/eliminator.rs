@@ -1,3 +1,5 @@
+use std::ops::Not;
+
 use crate::Eliminator;
 use crate::FeatureBoundedGenome;
 
@@ -118,5 +120,163 @@ where
         let median_index = (fitnesses.len() as f32) * self.threshold;
         fitnesses.truncate(median_index as usize + 1);
         fitnesses.into_par_iter().map(|(g, _)| g).collect()
+    }
+}
+
+/// A distinct type to help clarify the result of a knockout function.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum KnockoutWinner {
+    /// The first genome parameter won.
+    First,
+
+    /// The second genome parameter won.
+    Second
+}
+
+impl Into<usize> for KnockoutWinner {
+    fn into(self) -> usize {
+        match self {
+            Self::First => 0,
+            Self::Second => 1,
+        }
+    }
+}
+
+impl Not for KnockoutWinner {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::First => Self::Second,
+            Self::Second => Self::First
+        }
+    }
+}
+
+/// A function that pits two genomes against each other and determines a winner.
+pub trait KnockoutFn<G> {
+    /// Tests the genomes to figure out who wins.
+    fn knockout(&self, a: &G, b: &G) -> KnockoutWinner;
+}
+
+impl<G, F> KnockoutFn<G> for F
+where 
+    F: Fn(&G, &G) -> KnockoutWinner
+{
+    fn knockout(&self, a: &G, b: &G) -> KnockoutWinner {
+        (self)(a, b)
+    }
+}
+
+#[allow(missing_docs)]
+#[cfg(not(feature = "rayon"))]
+pub trait FeatureBoundedKnockoutFn<G>: KnockoutFn<G> {}
+#[cfg(not(feature = "rayon"))]
+impl<G, T: KnockoutFn<G>> FeatureBoundedKnockoutFn<G> for T {}
+
+#[allow(missing_docs)]
+#[cfg(feature = "rayon")]
+pub trait FeatureBoundedKnockoutFn<G>: KnockoutFn<G> + Send + Sync {}
+
+#[cfg(feature = "rayon")]
+impl<G, T: KnockoutFn<G> + Send + Sync> FeatureBoundedKnockoutFn<G> for T {}
+
+/// The action a knockout eliminator should take if the number of genomes is odd.
+pub enum ActionIfOdd {
+    /// Always expect an even number, crash if odd.
+    Panic,
+
+    /// Eliminate one of the genomes without checking it to
+    /// bring it back to even, then proceed with normal knockout.
+    DeleteSingle,
+
+    /// Preserve one of the genomes without checking it to bring
+    /// it back to even, then proceed with normal knockout.
+    KeepSingle,
+}
+
+impl ActionIfOdd {
+    pub(crate) fn exec<G>(&self, rng: &mut impl rand::Rng, genomes: &mut Vec<G>, output: &mut Vec<G>) {
+        match self {
+            Self::Panic => panic!("Knockout eliminator received an odd number of genomes"),
+            Self::DeleteSingle => { genomes.remove(rng.random_range(0..genomes.len())); },
+            Self::KeepSingle => output.push(genomes.remove(rng.random_range(0..genomes.len()))),
+        };
+    }
+}
+
+/// Eliminator that pits genomes against each other and eliminates the weaker ones.
+pub struct KnockoutEliminator<G: FeatureBoundedGenome, K: KnockoutFn<G>> {
+    /// The function that determines the winner of a pair of genomes.
+    pub knockout_fn: K,
+
+    /// The action the eliminator should take if there is an odd number of genomes.
+    pub action_if_odd: ActionIfOdd,
+
+    _marker: std::marker::PhantomData<G>,
+}
+
+impl<G, K> KnockoutEliminator<G, K>
+where 
+    G: FeatureBoundedGenome,
+    K: FeatureBoundedKnockoutFn<G>,
+{
+    /// Creates a new [`KnockoutEliminator`]
+    pub fn new(knockout_fn: K, action_if_odd: ActionIfOdd) -> Self {
+        Self {
+            knockout_fn,
+            action_if_odd,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<G, K> Eliminator<G> for KnockoutEliminator<G, K>
+where 
+    G: FeatureBoundedGenome,
+    K: FeatureBoundedKnockoutFn<G>,
+{
+    fn eliminate(&self, mut genomes: Vec<G>) -> Vec<G> {
+        let len = genomes.len();
+
+        if len < 2 {
+            return genomes;
+        }
+
+        let mut rng = rand::rng();
+        let mut output = Vec::with_capacity(genomes.len() / 2);
+
+        if len % 2 != 0 {
+            self.action_if_odd.exec(&mut rng, &mut genomes, &mut output);
+        }
+
+        debug_assert!(genomes.len() % 2 == 0);
+
+        #[cfg(not(feature = "rayon"))]
+        {
+            use itertools::Itertools;
+
+            output.extend(genomes
+                .drain(..)
+                .tuples()
+                .map(|(a, b)| match self.knockout_fn.knockout(&a, &b) {
+                    KnockoutWinner::First => a,
+                    KnockoutWinner::Second => b,
+                })
+                .collect::<Vec<_>>()
+            );
+        }
+
+        #[cfg(feature = "rayon")]
+        {
+            output.extend(genomes
+                .par_drain(..)
+                .chunks(2)
+                .map(|mut c| c.remove(<KnockoutWinner as Into<usize>>::into(self.knockout_fn.knockout(&c[0], &c[1]))))
+                .collect::<Vec<_>>()
+            );
+        }
+
+        output
     }
 }
