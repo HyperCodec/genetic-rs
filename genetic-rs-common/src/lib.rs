@@ -28,43 +28,37 @@ pub trait Repopulator<G> {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
 }
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(not(feature = "rayon"))]
 pub trait FeatureBoundedEliminator<G>: Eliminator<G> {}
 #[cfg(not(feature = "rayon"))]
 impl<G, T: Eliminator<G>> FeatureBoundedEliminator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(feature = "rayon")]
 pub trait FeatureBoundedEliminator<G>: Eliminator<G> + Send + Sync {}
 #[cfg(feature = "rayon")]
 impl<G, T: Eliminator<G> + Send + Sync> FeatureBoundedEliminator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(not(feature = "rayon"))]
 pub trait FeatureBoundedRepopulator<G>: Repopulator<G> {}
 #[cfg(not(feature = "rayon"))]
 impl<G, T: Repopulator<G>> FeatureBoundedRepopulator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(feature = "rayon")]
 pub trait FeatureBoundedRepopulator<G>: Repopulator<G> + Send + Sync {}
 #[cfg(feature = "rayon")]
 impl<G, T: Repopulator<G> + Send + Sync> FeatureBoundedRepopulator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(not(feature = "rayon"))]
 pub trait FeatureBoundedGenome {}
 #[cfg(not(feature = "rayon"))]
 impl<T> FeatureBoundedGenome for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(feature = "rayon")]
 pub trait FeatureBoundedGenome: Sized + Send + Sync {}
 #[cfg(feature = "rayon")]

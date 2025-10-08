@@ -12,10 +12,11 @@ keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
 [features]
-default = ["builtin", "genrand", "crossover"]
+default = ["builtin", "genrand", "crossover", "knockout", "speciation"]
 builtin = ["dep:rand", "dep:itertools"]
 crossover = ["builtin"]
 speciation = ["crossover"]
+knockout = ["builtin"]
 genrand = ["dep:rand"]
 rayon = ["dep:rayon"]
 
