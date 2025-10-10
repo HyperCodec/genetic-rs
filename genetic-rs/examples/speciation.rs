@@ -38,7 +38,7 @@ impl Speciated for MyGenome {
 }
 
 impl GenerateRandom for MyGenome {
-    fn gen_random(rng: &mut impl rand::Rng) -> Self {
+    fn gen_random(rng: &mut impl Rng) -> Self {
         Self {
             val1: rng.random_range(-1.0..1.0),
             val2: rng.random_range(-1.0..1.0),
