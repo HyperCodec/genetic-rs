@@ -26,10 +26,14 @@ impl Crossover for MyGenome {
     }
 }
 
+#[derive(PartialEq, Eq, Hash)]
+struct MySpecies(u32);
+
 impl Speciated for MyGenome {
-    fn is_same_species(&self, other: &Self) -> bool {
-        // declared same species by being close to matching values.
-        (self.val1 - other.val1).abs() + (self.val2 - other.val2).abs() <= 5.
+    type Species = MySpecies;
+    
+    fn species(&self) -> Self::Species {
+        MySpecies((self.val1 + self.val2).round() as u32)
     }
 }
 
@@ -54,7 +58,8 @@ fn main() {
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
         FitnessEliminator::new_with_default(fitness),
-        SpeciatedCrossoverRepopulator::new(0.25), // 25% mutation rate
+        // 25% mutation rate, allow cross-species reproduction in emergency scenarios
+        SpeciatedCrossoverRepopulator::new(0.25, true),
     );
 
     sim.perform_generations(100);
@@ -67,7 +72,8 @@ fn main() {
     let mut sim = GeneticSim::new(
         Vec::gen_random(100),
         FitnessEliminator::new_with_default(fitness),
-        SpeciatedCrossoverRepopulator::new(0.25), // 25% mutation rate
+        // 25% mutation rate, allow cross-species reproduction in emergency scenarios
+        SpeciatedCrossoverRepopulator::new(0.25, true),
     );
 
     sim.perform_generations(100);

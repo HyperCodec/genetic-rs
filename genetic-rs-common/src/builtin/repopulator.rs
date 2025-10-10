@@ -113,33 +113,41 @@ pub use crossover::*;
 
 #[cfg(feature = "speciation")]
 mod speciation {
+    use std::collections::HashMap;
+
     use super::*;
 
     /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
     #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
-    pub trait Speciated: Sized {
-        /// Calculates whether two genomes are similar enough to be considered part of the same species.
-        fn is_same_species(&self, other: &Self) -> bool;
+    pub trait Speciated {
+        /// The type used to distinguish
+        /// one genome's species from another.
+        type Species: Eq + std::hash::Hash; // I really don't like that we need `Eq` when `PartialEq` better fits the definiton.
 
-        /// Filters a list of genomes based on whether they are of the same species.
-        fn filter_same_species<'a>(&'a self, genomes: &'a [Self]) -> Vec<&'a Self> {
-            genomes.iter().filter(|g| self.is_same_species(g)).collect()
-        }
+        /// Get/calculate this genome's species.
+        fn species(&self) -> Self::Species;
     }
 
     /// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
     #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
-    pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated + PartialEq> {
+    pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated> {
         /// The mutation rate to use when mutating genomes. 0.0 - 1.0
         pub mutation_rate: f32,
+
+        /// Whether to allow genomes to reproduce across species boundaries
+        /// (effectively vanilla crossover)
+        /// in emergency situations where no genomes have compatible partners.
+        /// If disabled, the simulation will panic in such a situation.
+        pub allow_emergency_repr: bool,
         _marker: std::marker::PhantomData<G>,
     }
 
-    impl<G: Crossover + Speciated + PartialEq> SpeciatedCrossoverRepopulator<G> {
+    impl<G: Crossover + Speciated> SpeciatedCrossoverRepopulator<G> {
         /// Creates a new [`SpeciatedCrossoverRepopulator`].
-        pub fn new(mutation_rate: f32) -> Self {
+        pub fn new(mutation_rate: f32, allow_emergency_repr: bool) -> Self {
             Self {
                 mutation_rate,
+                allow_emergency_repr,
                 _marker: std::marker::PhantomData,
             }
         }
@@ -147,27 +155,62 @@ mod speciation {
 
     impl<G> Repopulator<G> for SpeciatedCrossoverRepopulator<G>
     where
-        G: Crossover + Speciated + PartialEq,
+        G: Crossover + Speciated,
     {
+        // i'm still not really satisfied with this implementation,
+        // but it's better than the old one.
         fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
+            let initial_size = genomes.len();
             let mut rng = rand::rng();
-            let champions = genomes.clone();
-            let mut champs_cycle = champions.iter().cycle();
+            let mut species: HashMap<<G as Speciated>::Species, Vec<&G>> = HashMap::new();
 
-            // TODO maybe rayonify
-            while genomes.len() < target_size {
-                let parent1 = champs_cycle.next().unwrap();
-                let mut parent2 = &champions[rng.random_range(0..champions.len() - 1)];
-
-                while parent1 == parent2 || !parent1.is_same_species(parent2) {
-                    // TODO panic or eliminate if this parent cannot find another survivor in the same species
-                    parent2 = &champions[rng.random_range(0..champions.len() - 1)];
-                }
-
-                let child = parent1.crossover(parent2, self.mutation_rate, &mut rng);
-
-                genomes.push(child);
+            for genome in genomes.iter() {
+                let spec = genome.species();
+                species.entry(spec).or_insert_with(Vec::new).push(genome);
             }
+
+            let mut species_iter = species.values();
+            let to_create = target_size - initial_size;
+            let mut new_genomes = Vec::with_capacity(to_create);
+
+            while new_genomes.len() < to_create {
+                if let Some(spec) = species_iter.next() {
+                    if spec.len() < 2 {
+                        continue;
+                    }
+
+                    for (i, &parent1) in spec.iter().enumerate() {
+                        let mut j = rng.random_range(1..spec.len());
+                        if j == i {
+                            j = 0;
+                        }
+                        let parent2 = spec[j];
+
+                        new_genomes.push(parent1.crossover(parent2, self.mutation_rate, &mut rng));
+                    }
+                } else {
+                    // reached the end, reset the iterator
+
+                    if new_genomes.is_empty() {
+                        // no genomes have compatible partners
+                        if self.allow_emergency_repr {
+                            drop(species_iter);
+                            drop(species);
+
+                            // bad to construct a whole new object for this edge case,
+                            // but it's not really adding that much overhead
+                            CrossoverRepopulator::new(self.mutation_rate).repopulate(genomes, target_size);
+                            return;
+                        } else {
+                            panic!("no genomes with common species");
+                        }
+                    }
+
+                    species_iter = species.values();
+                }
+            }
+
+            genomes.extend(new_genomes);
         }
     }
 }
