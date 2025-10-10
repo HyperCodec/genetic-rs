@@ -45,7 +45,6 @@ fn my_fitness_fn(ent: &MyGenome) -> f32 {
 }
 
 fn main() {
-    let mut rng = rand::rng();
     let mut sim = GeneticSim::new(
         // you must provide a random starting population. 
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
