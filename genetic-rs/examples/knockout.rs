@@ -40,10 +40,7 @@ impl Crossover for Genome {
 }
 
 fn knockout(a: &Genome, b: &Genome) -> KnockoutWinner {
-    match a.0.total_cmp(&b.0) {
-        Ordering::Equal | Ordering::Greater => KnockoutWinner::First,
-        Ordering::Less => KnockoutWinner::Second,
-    }
+    a.0.total_cmp(&b.0).into()
 }
 
 fn main() {
