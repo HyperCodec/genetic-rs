@@ -63,26 +63,11 @@ fn fitness(g: &MyGenome) -> f32 {
     (g.val1 - g.val2).abs()
 }
 
-#[cfg(not(feature = "rayon"))]
 fn main() {
     let mut rng = rand::rng();
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
-        FitnessEliminator::new_with_default(fitness),
-        // 25% mutation rate, allow cross-species reproduction in emergency scenarios
-        SpeciatedCrossoverRepopulator::new(0.25, true, ()),
-    );
-
-    sim.perform_generations(100);
-
-    dbg!(sim.genomes);
-}
-
-#[cfg(feature = "rayon")]
-fn main() {
-    let mut sim = GeneticSim::new(
-        Vec::gen_random(100),
         FitnessEliminator::new_with_default(fitness),
         // 25% mutation rate, allow cross-species reproduction in emergency scenarios
         SpeciatedCrossoverRepopulator::new(0.25, true, ()),

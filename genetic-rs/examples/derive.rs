@@ -6,17 +6,23 @@ struct TestGene {
 }
 
 impl RandomlyMutable for TestGene {
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+    type Context = ();
+
+    fn mutate(&mut self, _: &(), rate: f32, rng: &mut impl Rng) {
         self.a += rng.random_range(-1.0..1.0) * rate;
     }
 }
 
 #[cfg(feature = "crossover")]
 impl Crossover for TestGene {
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
-        Self {
-            a: (self.a + other.a + rng.random_range(-1.0..1.0) * rate) / 2.,
-        }
+    type Context = ();
+
+    fn crossover(&self, other: &Self, _: &(), rate: f32, rng: &mut impl Rng) -> Self {
+        let mut child = Self {
+            a: self.a + other.a / 2.0,
+        };
+        child.mutate(&(), rate, rng);
+        child
     }
 }
 

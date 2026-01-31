@@ -47,14 +47,10 @@ fn knockout(a: &Genome, b: &Genome) -> KnockoutWinner {
 }
 
 fn main() {
-    #[cfg(not(feature = "rayon"))]
     let mut rng = rand::rng();
 
     let mut sim = GeneticSim::new(
-        #[cfg(not(feature = "rayon"))]
         Vec::gen_random(&mut rng, 100),
-        #[cfg(feature = "rayon")]
-        Vec::gen_random(100),
         // we are using crossover, so we can always expect it
         // to maintain 100 genomes, which is an even number.
         KnockoutEliminator::new(knockout, ActionIfOdd::Panic),
