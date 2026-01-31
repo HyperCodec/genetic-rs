@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use genetic_rs::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -40,6 +38,7 @@ impl Crossover for Genome {
 }
 
 fn knockout(a: &Genome, b: &Genome) -> KnockoutWinner {
+    // bigger number wins
     a.0.total_cmp(&b.0).into()
 }
 

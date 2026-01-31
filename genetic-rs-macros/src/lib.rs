@@ -55,9 +55,18 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
 pub fn mitosis_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let name = &ast.ident;
+    let span = name.span();
 
-    quote! {
-        impl genetic_rs_common::prelude::Mitosis for #name {}
+    quote_spanned! {span=>
+        impl genetic_rs_common::prelude::Mitosis for #name {
+            type Context = <Self as genetic_rs_common::prelude::RandomlyMutable>::Context;
+
+            fn mitosis(&self, rate: f32, rng: &mut impl rand::Rng, ctx: Self::Context) -> Self {
+                let mut child = self.clone();
+                <Self as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut child, rate, ctx, rng);
+                child
+            }
+        }
     }
     .into()
 }
