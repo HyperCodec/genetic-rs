@@ -6,17 +6,21 @@ struct MyGenome {
 }
 
 impl RandomlyMutable for MyGenome {
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+    type Context = ();
+
+    fn mutate(&mut self, _: &(), rate: f32, rng: &mut impl Rng) {
         self.val += rng.random::<f32>() * rate;
     }
 }
 
 impl Crossover for MyGenome {
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
+    type Context = ();
+
+    fn crossover(&self, other: &Self, _: &(), rate: f32, rng: &mut impl Rng) -> Self {
         let mut child = Self {
             val: (self.val + other.val) / 2.,
         };
-        child.mutate(rate, rng);
+        child.mutate(&(), rate, rng);
         child
     }
 }
@@ -39,7 +43,7 @@ fn main() {
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
         FitnessEliminator::new_with_default(fitness),
-        CrossoverRepopulator::new(0.25), // 25% mutation rate
+        CrossoverRepopulator::new(0.25, ()), // 25% mutation rate
     );
 
     sim.perform_generations(100);

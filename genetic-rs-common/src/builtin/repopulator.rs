@@ -1,35 +1,41 @@
-use rand::Rng as RandRng;
-
 use crate::Repopulator;
+use rand::Rng as RandRng;
 
 /// Used in other traits to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
+    /// Simulation-wide context required for this mutation implementation.
+    type Context;
+
     /// Mutate the genome with a given mutation rate (0..1)
-    fn mutate(&mut self, rate: f32, rng: &mut impl rand::Rng);
+    fn mutate(&mut self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng);
 }
 
 /// Used in dividually-reproducing [`Repopulator`]s
-pub trait Mitosis: Clone + RandomlyMutable {
+pub trait Mitosis: Clone {
+    /// Simulation-wide context required for this mitosis implementation.
+    type Context;
+
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
-    fn divide(&self, rate: f32, rng: &mut impl rand::Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(rate, rng);
-        child
-    }
+    fn divide(&self, ctx: &<Self as Mitosis>::Context, rate: f32, rng: &mut impl rand::Rng)
+        -> Self;
 }
 
 /// Repopulator that uses division reproduction to create new genomes.
 pub struct MitosisRepopulator<G: Mitosis> {
     /// The mutation rate to use when mutating genomes. 0.0 - 1.0
     pub mutation_rate: f32,
+
+    /// The context to use when mutating genomes.
+    pub ctx: G::Context,
     _marker: std::marker::PhantomData<G>,
 }
 
 impl<G: Mitosis> MitosisRepopulator<G> {
     /// Creates a new [`MitosisRepopulator`].
-    pub fn new(mutation_rate: f32) -> Self {
+    pub fn new(mutation_rate: f32, ctx: G::Context) -> Self {
         Self {
             mutation_rate,
+            ctx,
             _marker: std::marker::PhantomData,
         }
     }
@@ -47,7 +53,7 @@ where
         // TODO maybe rayonify
         while genomes.len() < target_size {
             let parent = champs_cycle.next().unwrap();
-            let child = parent.divide(self.mutation_rate, &mut rng);
+            let child = parent.divide(&self.ctx, self.mutation_rate, &mut rng);
             genomes.push(child);
         }
     }
@@ -60,8 +66,17 @@ mod crossover {
     /// Used in crossover-reproducing [`Repopulator`]s
     #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
     pub trait Crossover: Clone {
+        /// Simulation-wide context required for this crossover implementation.
+        type Context;
+
         /// Use crossover reproduction to create a new genome.
-        fn crossover(&self, other: &Self, rate: f32, rng: &mut impl rand::Rng) -> Self;
+        fn crossover(
+            &self,
+            other: &Self,
+            ctx: &Self::Context,
+            rate: f32,
+            rng: &mut impl rand::Rng,
+        ) -> Self;
     }
 
     /// Repopulator that uses crossover reproduction to create new genomes.
@@ -69,14 +84,18 @@ mod crossover {
     pub struct CrossoverRepopulator<G: Crossover> {
         /// The mutation rate to use when mutating genomes. 0.0 - 1.0
         pub mutation_rate: f32,
+
+        /// Additional context for crossover/mutation.
+        pub ctx: G::Context,
         _marker: std::marker::PhantomData<G>,
     }
 
     impl<G: Crossover> CrossoverRepopulator<G> {
         /// Creates a new [`CrossoverRepopulator`].
-        pub fn new(mutation_rate: f32) -> Self {
+        pub fn new(mutation_rate: f32, ctx: G::Context) -> Self {
             Self {
                 mutation_rate,
+                ctx,
                 _marker: std::marker::PhantomData,
             }
         }
@@ -100,7 +119,7 @@ mod crossover {
                 }
                 let parent2 = &genomes[j];
 
-                let child = parent1.crossover(parent2, self.mutation_rate, &mut rng);
+                let child = parent1.crossover(parent2, &self.ctx, self.mutation_rate, &mut rng);
 
                 genomes.push(child);
             }
@@ -131,22 +150,24 @@ mod speciation {
     /// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
     #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
     pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated> {
-        /// The mutation rate to use when mutating genomes. 0.0 - 1.0
-        pub mutation_rate: f32,
+        /// The inner crossover repopulator. This holds the settings for crossover operations,
+        /// but may also be called if [`allow_emergency_repr`][Self::allow_emergency_repr] is `true`.
+        pub crossover: CrossoverRepopulator<G>,
 
         /// Whether to allow genomes to reproduce across species boundaries
         /// (effectively vanilla crossover)
         /// in emergency situations where no genomes have compatible partners.
         /// If disabled, the simulation will panic in such a situation.
         pub allow_emergency_repr: bool,
+
         _marker: std::marker::PhantomData<G>,
     }
 
     impl<G: Crossover + Speciated> SpeciatedCrossoverRepopulator<G> {
         /// Creates a new [`SpeciatedCrossoverRepopulator`].
-        pub fn new(mutation_rate: f32, allow_emergency_repr: bool) -> Self {
+        pub fn new(mutation_rate: f32, allow_emergency_repr: bool, ctx: G::Context) -> Self {
             Self {
-                mutation_rate,
+                crossover: CrossoverRepopulator::new(mutation_rate, ctx),
                 allow_emergency_repr,
                 _marker: std::marker::PhantomData,
             }
@@ -186,7 +207,12 @@ mod speciation {
                         }
                         let parent2 = spec[j];
 
-                        new_genomes.push(parent1.crossover(parent2, self.mutation_rate, &mut rng));
+                        new_genomes.push(parent1.crossover(
+                            parent2,
+                            &self.crossover.ctx,
+                            self.crossover.mutation_rate,
+                            &mut rng,
+                        ));
                     }
                 } else {
                     // reached the end, reset the iterator
@@ -197,9 +223,7 @@ mod speciation {
                             drop(species_iter);
                             drop(species);
 
-                            // bad to construct a whole new object for this edge case,
-                            // but it's not really adding that much overhead
-                            CrossoverRepopulator::new(self.mutation_rate).repopulate(genomes, target_size);
+                            self.crossover.repopulate(genomes, target_size);
                             return;
                         } else {
                             panic!("no genomes with common species");
