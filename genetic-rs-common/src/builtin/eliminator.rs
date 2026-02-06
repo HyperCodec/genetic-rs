@@ -138,11 +138,11 @@ mod knockout {
         Second,
     }
 
-    impl Into<usize> for KnockoutWinner {
-        fn into(self) -> usize {
-            match self {
-                Self::First => 0,
-                Self::Second => 1,
+    impl From<KnockoutWinner> for usize {
+        fn from(winner: KnockoutWinner) -> Self {
+            match winner {
+                KnockoutWinner::First => 0,
+                KnockoutWinner::Second => 1,
             }
         }
     }
@@ -270,11 +270,11 @@ mod knockout {
             let mut rng = rand::rng();
             let mut output = Vec::with_capacity(genomes.len() / 2);
 
-            if len % 2 != 0 {
+            if !len.is_multiple_of(2) {
                 self.action_if_odd.exec(&mut rng, &mut genomes, &mut output);
             }
 
-            debug_assert!(genomes.len() % 2 == 0);
+            debug_assert!(genomes.len().is_multiple_of(2));
 
             #[cfg(not(feature = "rayon"))]
             {

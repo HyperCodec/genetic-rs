@@ -42,16 +42,14 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
                             <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, ctx, rate, rng);
                         });
                     }
+                } else if custom_context {
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, &ctx.#i, rate, rng);
+                    });
                 } else {
-                    if custom_context {
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, &ctx.#i, rate, rng);
-                        });
-                    } else {
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, ctx, rate, rng);
-                        });
-                    }
+                    inner.push(quote_spanned! {span=>
+                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, ctx, rate, rng);
+                    });
                 }
             }
 

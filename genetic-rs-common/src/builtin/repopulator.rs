@@ -220,9 +220,6 @@ mod speciation {
                     if new_genomes.is_empty() {
                         // no genomes have compatible partners
                         if self.allow_emergency_repr {
-                            drop(species_iter);
-                            drop(species);
-
                             self.crossover.repopulate(genomes, target_size);
                             return;
                         } else {
