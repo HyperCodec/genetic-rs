@@ -50,7 +50,7 @@ fn main() {
     let mut rng = rand::rng();
     let mut sim = GeneticSim::new(
         // you must provide a random starting population. 
-        // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
+        // size will be preserved in builtin repopulators, but it is not required to keep a constant size if you were to build your own.
         // in this case, the compiler can infer the type of `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
         FitnessEliminator::new_with_default(my_fitness_fn),
