@@ -11,7 +11,7 @@ First off, this crate comes with the `builtin`, `crossover`, and `genrand` featu
 
 ### How to Use
 > [!NOTE] 
-> If you are interested in implementing NEAT with this, try out the [neat](https://crates.io/crates/neat) crate
+> If you are interested in implementing NEAT with this, or just want a more complex example, try out the [neat](https://crates.io/crates/neat) crate
 
 Here's a simple genetic algorithm:
 
