@@ -7,7 +7,7 @@
 A small framework for managing genetic algorithms.
 
 ### Features
-First off, this crate comes with the `builtin`, `crossover`, and `genrand` features by default. If you want it to be parallelized (which is true in most cases), you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature.
+First off, this crate comes with the `builtin`, `crossover`, and `genrand` features by default. If you want it to be parallelized (which is true in most cases), you can add the `rayon` feature. If you want your crossover to be speciated, you can add the `speciation` feature. There are also some convenient macros with the `derive` feature.
 
 ### How to Use
 > [!NOTE] 
