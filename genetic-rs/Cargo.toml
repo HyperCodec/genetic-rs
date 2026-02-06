@@ -1,6 +1,6 @@
 [package]
 name = "genetic-rs"
-description = "A small crate for quickstarting genetic algorithm projects"
+description = "A small framework for managing genetic algorithms"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -12,21 +12,21 @@ keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
 [features]
-default = ["builtin", "genrand", "crossover"]
+default = ["builtin", "genrand", "crossover", "knockout", "speciation"]
 builtin = ["genetic-rs-common/builtin"]
 crossover = ["builtin", "genetic-rs-common/crossover", "genetic-rs-macros/crossover"]
 speciation = ["crossover", "genetic-rs-common/speciation"]
+knockout = ["builtin", "genetic-rs-common/knockout"]
 genrand = ["genetic-rs-common/genrand"]
 rayon = ["genetic-rs-common/rayon"]
-derive = ["dep:genetic-rs-macros", "genetic-rs-common/builtin"]
-tracing = ["genetic-rs-common/tracing"]
+derive = ["dep:genetic-rs-macros", "builtin"]
 
 [dependencies]
-genetic-rs-common = { path = "../genetic-rs-common", version = "1.0.0" }
-genetic-rs-macros = { path = "../genetic-rs-macros", version = "1.0.0", optional = true }
+genetic-rs-common = { path = "../genetic-rs-common", version = "1.1.0", default-features = false }
+genetic-rs-macros = { path = "../genetic-rs-macros", version = "1.1.0", optional = true }
 
 [lints.rust]
-unexpected-cfgs = {level = "allow", check-cfg = ["cfg(publish)"]}
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(publish)"] }
 
 [dev-dependencies]
 rand = "0.9.2"

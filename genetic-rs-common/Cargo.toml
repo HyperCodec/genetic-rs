@@ -12,13 +12,13 @@ keywords = ["genetic", "algorithm", "rust"]
 categories = ["algorithms", "science", "simulation"]
 
 [features]
-default = ["builtin", "genrand", "crossover"]
-builtin = ["dep:rand"]
+default = ["builtin", "genrand", "crossover", "knockout", "speciation"]
+builtin = ["dep:rand", "dep:itertools"]
 crossover = ["builtin"]
 speciation = ["crossover"]
+knockout = ["builtin"]
 genrand = ["dep:rand"]
 rayon = ["dep:rayon"]
-tracing = ["dep:tracing"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -27,6 +27,6 @@ features = ["crossover", "speciation"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+itertools = { version = "0.14.0", optional = true }
 rand = { version = "0.9.2", optional = true }
-rayon = { version = "1.10.0", optional = true }
-tracing = { version = "0.1.41", optional = true }
+rayon = { version = "1.11.0", optional = true }

@@ -16,23 +16,6 @@ pub mod prelude;
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
-#[cfg(feature = "tracing")]
-use tracing::*;
-
-#[cfg(feature = "tracing")]
-#[allow(missing_docs)]
-pub trait Rng: rand::Rng + std::fmt::Debug {}
-
-#[cfg(feature = "tracing")]
-impl<T: rand::Rng + std::fmt::Debug> Rng for T {}
-
-#[cfg(not(feature = "tracing"))]
-#[allow(missing_docs)]
-pub trait Rng: rand::Rng {}
-
-#[cfg(not(feature = "tracing"))]
-impl<T: rand::Rng> Rng for T {}
-
 /// Tests and eliminates the unfit from the simulation.
 pub trait Eliminator<G> {
     /// Tests and eliminates the unfit from the simulation.
@@ -45,43 +28,37 @@ pub trait Repopulator<G> {
     fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
 }
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(not(feature = "rayon"))]
 pub trait FeatureBoundedEliminator<G>: Eliminator<G> {}
 #[cfg(not(feature = "rayon"))]
 impl<G, T: Eliminator<G>> FeatureBoundedEliminator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(feature = "rayon")]
 pub trait FeatureBoundedEliminator<G>: Eliminator<G> + Send + Sync {}
 #[cfg(feature = "rayon")]
 impl<G, T: Eliminator<G> + Send + Sync> FeatureBoundedEliminator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(not(feature = "rayon"))]
 pub trait FeatureBoundedRepopulator<G>: Repopulator<G> {}
 #[cfg(not(feature = "rayon"))]
 impl<G, T: Repopulator<G>> FeatureBoundedRepopulator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(feature = "rayon")]
 pub trait FeatureBoundedRepopulator<G>: Repopulator<G> + Send + Sync {}
 #[cfg(feature = "rayon")]
 impl<G, T: Repopulator<G> + Send + Sync> FeatureBoundedRepopulator<G> for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(not(feature = "rayon"))]
 pub trait FeatureBoundedGenome {}
 #[cfg(not(feature = "rayon"))]
 impl<T> FeatureBoundedGenome for T {}
 
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
+#[doc(hidden)]
 #[cfg(feature = "rayon")]
 pub trait FeatureBoundedGenome: Sized + Send + Sync {}
 #[cfg(feature = "rayon")]
@@ -118,20 +95,11 @@ where
 
     /// Uses the [`Eliminator`] and [`Repopulator`] provided in [`GeneticSim::new`] to create the next generation of genomes.
     pub fn next_generation(&mut self) {
-        #[cfg(feature = "tracing")]
-        let span = span!(Level::TRACE, "next_generation");
-
-        #[cfg(feature = "tracing")]
-        let enter = span.enter();
-
         let genomes = std::mem::take(&mut self.genomes);
 
         let target_size = genomes.len();
         self.genomes = self.eliminator.eliminate(genomes);
         self.repopulator.repopulate(&mut self.genomes, target_size);
-
-        #[cfg(feature = "tracing")]
-        drop(enter);
     }
 
     /// Calls [`next_generation`][GeneticSim::next_generation] `count` number of times.
@@ -147,50 +115,47 @@ where
 #[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandom {
     /// Create a completely random instance of the genome
-    fn gen_random(rng: &mut impl Rng) -> Self;
+    fn gen_random(rng: &mut impl rand::Rng) -> Self;
 }
 
 /// Blanket trait used on collections that contain objects implementing [`GenerateRandom`]
-#[cfg(all(feature = "genrand", not(feature = "rayon")))]
+#[cfg(feature = "genrand")]
 #[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandomCollection<T>
 where
     T: GenerateRandom,
 {
     /// Generate a random collection of the inner objects with a given amount
-    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self;
+    fn gen_random(rng: &mut impl rand::Rng, amount: usize) -> Self;
 }
 
 /// Rayon version of the [`GenerateRandomCollection`] trait
 #[cfg(all(feature = "genrand", feature = "rayon"))]
-pub trait GenerateRandomCollection<T>
+pub trait GenerateRandomCollectionParallel<T>
 where
     T: GenerateRandom + Send,
 {
     /// Generate a random collection of the inner objects with the given amount. Does not pass in rng like the sync counterpart.
-    fn gen_random(amount: usize) -> Self;
+    fn par_gen_random(amount: usize) -> Self;
 }
 
-#[cfg(not(feature = "rayon"))]
 impl<C, T> GenerateRandomCollection<T> for C
 where
     C: FromIterator<T>,
     T: GenerateRandom,
 {
-    #[cfg_attr(feature = "tracing", instrument)]
-    fn gen_random(rng: &mut impl Rng, amount: usize) -> Self {
+    fn gen_random(rng: &mut impl rand::Rng, amount: usize) -> Self {
         (0..amount).map(|_| T::gen_random(rng)).collect()
     }
 }
 
 #[cfg(feature = "rayon")]
-impl<C, T> GenerateRandomCollection<T> for C
+impl<C, T> GenerateRandomCollectionParallel<T> for C
 where
     C: FromParallelIterator<T>,
     T: GenerateRandom + Send,
 {
-    #[cfg_attr(feature = "tracing", instrument)]
-    fn gen_random(amount: usize) -> Self {
+    fn par_gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
             .map(|_| T::gen_random(&mut rand::rng()))

@@ -1,81 +1,41 @@
+use crate::Repopulator;
 use rand::Rng as RandRng;
-
-use crate::{Repopulator, Rng};
-
-#[cfg(feature = "tracing")]
-use tracing::*;
 
 /// Used in other traits to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
+    /// Simulation-wide context required for this mutation implementation.
+    type Context;
+
     /// Mutate the genome with a given mutation rate (0..1)
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng);
+    fn mutate(&mut self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng);
 }
-
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
-#[cfg(not(feature = "tracing"))]
-pub trait FeatureBoundedRandomlyMutable: RandomlyMutable {}
-#[cfg(not(feature = "tracing"))]
-impl<T: RandomlyMutable> FeatureBoundedRandomlyMutable for T {}
-
-/// Internal trait that simply deals with the trait bounds of features to avoid duplicate code.
-/// It is blanket implemented, so you should never have to reference this directly.
-#[cfg(feature = "tracing")]
-pub trait FeatureBoundedRandomlyMutable: RandomlyMutable + std::fmt::Debug {}
-#[cfg(feature = "tracing")]
-impl<T: RandomlyMutable + std::fmt::Debug> FeatureBoundedRandomlyMutable for T {}
 
 /// Used in dividually-reproducing [`Repopulator`]s
-pub trait Mitosis: Clone + FeatureBoundedRandomlyMutable {
+pub trait Mitosis: Clone {
+    /// Simulation-wide context required for this mitosis implementation.
+    type Context;
+
     /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
-    fn divide(&self, rate: f32, rng: &mut impl Rng) -> Self {
-        let mut child = self.clone();
-        child.mutate(rate, rng);
-        child
-    }
-}
-
-/// Used in crossover-reproducing [`Repopulator`]s
-#[cfg(all(feature = "crossover", not(feature = "tracing")))]
-#[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait Crossover: Clone + PartialEq {
-    /// Use crossover reproduction to create a new genome.
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
-}
-
-/// Used in crossover-reproducing [`next_gen`]s
-#[cfg(all(feature = "crossover", feature = "tracing"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
-pub trait Crossover: Clone + std::fmt::Debug {
-    /// Use crossover reproduction to create a new genome.
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self;
-}
-
-/// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
-#[cfg(feature = "speciation")]
-#[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
-pub trait Speciated: Sized {
-    /// Calculates whether two genomes are similar enough to be considered part of the same species.
-    fn is_same_species(&self, other: &Self) -> bool;
-
-    /// Filters a list of genomes based on whether they are of the same species.
-    fn filter_same_species<'a>(&'a self, genomes: &'a [Self]) -> Vec<&'a Self> {
-        genomes.iter().filter(|g| self.is_same_species(g)).collect()
-    }
+    fn divide(&self, ctx: &<Self as Mitosis>::Context, rate: f32, rng: &mut impl rand::Rng)
+        -> Self;
 }
 
 /// Repopulator that uses division reproduction to create new genomes.
 pub struct MitosisRepopulator<G: Mitosis> {
     /// The mutation rate to use when mutating genomes. 0.0 - 1.0
     pub mutation_rate: f32,
+
+    /// The context to use when mutating genomes.
+    pub ctx: G::Context,
     _marker: std::marker::PhantomData<G>,
 }
 
 impl<G: Mitosis> MitosisRepopulator<G> {
     /// Creates a new [`MitosisRepopulator`].
-    pub fn new(mutation_rate: f32) -> Self {
+    pub fn new(mutation_rate: f32, ctx: G::Context) -> Self {
         Self {
             mutation_rate,
+            ctx,
             _marker: std::marker::PhantomData,
         }
     }
@@ -93,122 +53,188 @@ where
         // TODO maybe rayonify
         while genomes.len() < target_size {
             let parent = champs_cycle.next().unwrap();
-            let child = parent.divide(self.mutation_rate, &mut rng);
+            let child = parent.divide(&self.ctx, self.mutation_rate, &mut rng);
             genomes.push(child);
         }
     }
 }
 
-/// Repopulator that uses crossover reproduction to create new genomes.
-pub struct CrossoverRepopulator<G: Crossover> {
-    /// The mutation rate to use when mutating genomes. 0.0 - 1.0
-    pub mutation_rate: f32,
-    _marker: std::marker::PhantomData<G>,
-}
+#[cfg(feature = "crossover")]
+mod crossover {
+    use super::*;
 
-impl<G: Crossover> CrossoverRepopulator<G> {
-    /// Creates a new [`CrossoverRepopulator`].
-    pub fn new(mutation_rate: f32) -> Self {
-        Self {
-            mutation_rate,
-            _marker: std::marker::PhantomData,
-        }
+    /// Used in crossover-reproducing [`Repopulator`]s
+    #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
+    pub trait Crossover: Clone {
+        /// Simulation-wide context required for this crossover implementation.
+        type Context;
+
+        /// Use crossover reproduction to create a new genome.
+        fn crossover(
+            &self,
+            other: &Self,
+            ctx: &Self::Context,
+            rate: f32,
+            rng: &mut impl rand::Rng,
+        ) -> Self;
     }
-}
 
-impl<G> Repopulator<G> for CrossoverRepopulator<G>
-where
-    G: Crossover,
-{
-    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
-        let mut rng = rand::rng();
-        let champions = genomes.clone();
-        let mut champs_cycle = champions.iter().enumerate().cycle();
+    /// Repopulator that uses crossover reproduction to create new genomes.
+    #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
+    pub struct CrossoverRepopulator<G: Crossover> {
+        /// The mutation rate to use when mutating genomes. 0.0 - 1.0
+        pub mutation_rate: f32,
 
-        // TODO maybe rayonify
-        while genomes.len() < target_size {
-            let (i, parent1) = champs_cycle.next().unwrap();
-            let mut j = rng.random_range(1..champions.len());
-            if i == j {
-                j = 0;
+        /// Additional context for crossover/mutation.
+        pub ctx: G::Context,
+        _marker: std::marker::PhantomData<G>,
+    }
+
+    impl<G: Crossover> CrossoverRepopulator<G> {
+        /// Creates a new [`CrossoverRepopulator`].
+        pub fn new(mutation_rate: f32, ctx: G::Context) -> Self {
+            Self {
+                mutation_rate,
+                ctx,
+                _marker: std::marker::PhantomData,
             }
-            let parent2 = &genomes[j];
+        }
+    }
 
-            #[cfg(feature = "tracing")]
-            let span = span!(
-                Level::DEBUG,
-                "crossover",
-                a = tracing::field::debug(parent1),
-                b = tracing::field::debug(parent2)
-            );
-            #[cfg(feature = "tracing")]
-            let enter = span.enter();
+    impl<G> Repopulator<G> for CrossoverRepopulator<G>
+    where
+        G: Crossover,
+    {
+        fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
+            let mut rng = rand::rng();
+            let champions = genomes.clone();
+            let mut champs_cycle = champions.iter().enumerate().cycle();
 
-            let child = parent1.crossover(parent2, self.mutation_rate, &mut rng);
+            // TODO maybe rayonify
+            while genomes.len() < target_size {
+                let (i, parent1) = champs_cycle.next().unwrap();
+                let mut j = rng.random_range(1..champions.len());
+                if i == j {
+                    j = 0;
+                }
+                let parent2 = &genomes[j];
 
-            #[cfg(feature = "tracing")]
-            drop(enter);
+                let child = parent1.crossover(parent2, &self.ctx, self.mutation_rate, &mut rng);
 
-            genomes.push(child);
+                genomes.push(child);
+            }
         }
     }
 }
 
-/// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
-#[cfg(feature = "speciation")]
-pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated + PartialEq> {
-    /// The mutation rate to use when mutating genomes. 0.0 - 1.0
-    pub mutation_rate: f32,
-    _marker: std::marker::PhantomData<G>,
-}
+#[cfg(feature = "crossover")]
+pub use crossover::*;
 
 #[cfg(feature = "speciation")]
-impl<G: Crossover + Speciated + PartialEq> SpeciatedCrossoverRepopulator<G> {
-    /// Creates a new [`SpeciatedCrossoverRepopulator`].
-    pub fn new(mutation_rate: f32) -> Self {
-        Self {
-            mutation_rate,
-            _marker: std::marker::PhantomData,
+mod speciation {
+    use std::collections::HashMap;
+
+    use super::*;
+
+    /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
+    #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
+    pub trait Speciated {
+        /// The type used to distinguish
+        /// one genome's species from another.
+        type Species: Eq + std::hash::Hash; // I really don't like that we need `Eq` when `PartialEq` better fits the definiton.
+
+        /// Get/calculate this genome's species.
+        fn species(&self) -> Self::Species;
+    }
+
+    /// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
+    #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
+    pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated> {
+        /// The inner crossover repopulator. This holds the settings for crossover operations,
+        /// but may also be called if [`allow_emergency_repr`][Self::allow_emergency_repr] is `true`.
+        pub crossover: CrossoverRepopulator<G>,
+
+        /// Whether to allow genomes to reproduce across species boundaries
+        /// (effectively vanilla crossover)
+        /// in emergency situations where no genomes have compatible partners.
+        /// If disabled, the simulation will panic in such a situation.
+        pub allow_emergency_repr: bool,
+
+        _marker: std::marker::PhantomData<G>,
+    }
+
+    impl<G: Crossover + Speciated> SpeciatedCrossoverRepopulator<G> {
+        /// Creates a new [`SpeciatedCrossoverRepopulator`].
+        pub fn new(mutation_rate: f32, allow_emergency_repr: bool, ctx: G::Context) -> Self {
+            Self {
+                crossover: CrossoverRepopulator::new(mutation_rate, ctx),
+                allow_emergency_repr,
+                _marker: std::marker::PhantomData,
+            }
         }
     }
-}
 
-#[cfg(feature = "speciation")]
-impl<G> Repopulator<G> for SpeciatedCrossoverRepopulator<G>
-where
-    G: Crossover + Speciated + PartialEq,
-{
-    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
-        let mut rng = rand::rng();
-        let champions = genomes.clone();
-        let mut champs_cycle = champions.iter().cycle();
+    impl<G> Repopulator<G> for SpeciatedCrossoverRepopulator<G>
+    where
+        G: Crossover + Speciated,
+    {
+        // i'm still not really satisfied with this implementation,
+        // but it's better than the old one.
+        fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
+            let initial_size = genomes.len();
+            let mut rng = rand::rng();
+            let mut species: HashMap<<G as Speciated>::Species, Vec<&G>> = HashMap::new();
 
-        // TODO maybe rayonify
-        while genomes.len() < target_size {
-            let parent1 = champs_cycle.next().unwrap();
-            let mut parent2 = &champions[rng.random_range(0..champions.len() - 1)];
-
-            while parent1 == parent2 || !parent1.is_same_species(parent2) {
-                // TODO panic or eliminate if this parent cannot find another survivor in the same species
-                parent2 = &champions[rng.random_range(0..champions.len() - 1)];
+            for genome in genomes.iter() {
+                let spec = genome.species();
+                species.entry(spec).or_insert_with(Vec::new).push(genome);
             }
 
-            #[cfg(feature = "tracing")]
-            let span = span!(
-                Level::DEBUG,
-                "crossover",
-                a = tracing::field::debug(parent1),
-                b = tracing::field::debug(parent2)
-            );
-            #[cfg(feature = "tracing")]
-            let enter = span.enter();
+            let mut species_iter = species.values();
+            let to_create = target_size - initial_size;
+            let mut new_genomes = Vec::with_capacity(to_create);
 
-            let child = parent1.crossover(parent2, self.mutation_rate, &mut rng);
+            while new_genomes.len() < to_create {
+                if let Some(spec) = species_iter.next() {
+                    if spec.len() < 2 {
+                        continue;
+                    }
 
-            #[cfg(feature = "tracing")]
-            drop(enter);
+                    for (i, &parent1) in spec.iter().enumerate() {
+                        let mut j = rng.random_range(1..spec.len());
+                        if j == i {
+                            j = 0;
+                        }
+                        let parent2 = spec[j];
 
-            genomes.push(child);
+                        new_genomes.push(parent1.crossover(
+                            parent2,
+                            &self.crossover.ctx,
+                            self.crossover.mutation_rate,
+                            &mut rng,
+                        ));
+                    }
+                } else {
+                    // reached the end, reset the iterator
+
+                    if new_genomes.is_empty() {
+                        // no genomes have compatible partners
+                        if self.allow_emergency_repr {
+                            self.crossover.repopulate(genomes, target_size);
+                            return;
+                        } else {
+                            panic!("no genomes with common species");
+                        }
+                    }
+
+                    species_iter = species.values();
+                }
+            }
+
+            genomes.extend(new_genomes);
         }
     }
 }
+
+#[cfg(feature = "speciation")]
+pub use speciation::*;
