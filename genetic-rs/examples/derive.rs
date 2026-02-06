@@ -8,7 +8,7 @@ struct Foo1(f32);
 
 impl RandomlyMutable for Foo1 {
     type Context = Context1;
-    
+
     fn mutate(&mut self, _ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
         self.0 += rng.random_range(-rate..rate);
     }
@@ -19,7 +19,7 @@ struct Foo2(f32);
 
 impl RandomlyMutable for Foo2 {
     type Context = Context2;
-    
+
     fn mutate(&mut self, _ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
         self.0 += rng.random_range(-rate..rate);
     }

@@ -64,7 +64,7 @@ fn main() {
 }
 ```
 
-That is the minimal code for a working genetic algorithm on default features (+ rayon). You can [read the docs](https://docs.rs/genetic-rs) or [check the examples](/genetic-rs/examples/) for more complicated systems. I highly recommend looking into crossover reproduction, as it tends to produce better results than mitosis.
+That is the minimal code for a working genetic algorithm on default features. You can [read the docs](https://docs.rs/genetic-rs) or [check the examples](/genetic-rs/examples/) for more complicated systems. I highly recommend looking into crossover reproduction, as it tends to produce better results than mitosis.
 
 ### License
 This project falls under the `MIT` license.
