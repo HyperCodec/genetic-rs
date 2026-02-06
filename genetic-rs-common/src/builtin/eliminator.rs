@@ -123,6 +123,8 @@ where
 
 #[cfg(feature = "knockout")]
 mod knockout {
+    use std::cmp::Ordering;
+
     use super::*;
 
     /// A distinct type to help clarify the result of a knockout function.
@@ -133,14 +135,14 @@ mod knockout {
         First,
 
         /// The second genome parameter won.
-        Second
+        Second,
     }
 
-    impl Into<usize> for KnockoutWinner {
-        fn into(self) -> usize {
-            match self {
-                Self::First => 0,
-                Self::Second => 1,
+    impl From<KnockoutWinner> for usize {
+        fn from(winner: KnockoutWinner) -> Self {
+            match winner {
+                KnockoutWinner::First => 0,
+                KnockoutWinner::Second => 1,
             }
         }
     }
@@ -151,7 +153,16 @@ mod knockout {
         fn not(self) -> Self::Output {
             match self {
                 Self::First => Self::Second,
-                Self::Second => Self::First
+                Self::Second => Self::First,
+            }
+        }
+    }
+
+    impl From<Ordering> for KnockoutWinner {
+        fn from(ordering: Ordering) -> Self {
+            match ordering {
+                Ordering::Less | Ordering::Equal => Self::First,
+                Ordering::Greater => Self::Second,
             }
         }
     }
@@ -164,8 +175,8 @@ mod knockout {
     }
 
     impl<G, F> KnockoutFn<G> for F
-    where 
-        F: Fn(&G, &G) -> KnockoutWinner
+    where
+        F: Fn(&G, &G) -> KnockoutWinner,
     {
         fn knockout(&self, a: &G, b: &G) -> KnockoutWinner {
             (self)(a, b)
@@ -201,10 +212,17 @@ mod knockout {
     }
 
     impl ActionIfOdd {
-        pub(crate) fn exec<G>(&self, rng: &mut impl rand::Rng, genomes: &mut Vec<G>, output: &mut Vec<G>) {
+        pub(crate) fn exec<G>(
+            &self,
+            rng: &mut impl rand::Rng,
+            genomes: &mut Vec<G>,
+            output: &mut Vec<G>,
+        ) {
             match self {
                 Self::Panic => panic!("Knockout eliminator received an odd number of genomes"),
-                Self::DeleteSingle => { genomes.remove(rng.random_range(0..genomes.len())); },
+                Self::DeleteSingle => {
+                    genomes.remove(rng.random_range(0..genomes.len()));
+                }
                 Self::KeepSingle => output.push(genomes.remove(rng.random_range(0..genomes.len()))),
             };
         }
@@ -223,7 +241,7 @@ mod knockout {
     }
 
     impl<G, K> KnockoutEliminator<G, K>
-    where 
+    where
         G: FeatureBoundedGenome,
         K: FeatureBoundedKnockoutFn<G>,
     {
@@ -238,7 +256,7 @@ mod knockout {
     }
 
     impl<G, K> Eliminator<G> for KnockoutEliminator<G, K>
-    where 
+    where
         G: FeatureBoundedGenome,
         K: FeatureBoundedKnockoutFn<G>,
     {
@@ -252,34 +270,40 @@ mod knockout {
             let mut rng = rand::rng();
             let mut output = Vec::with_capacity(genomes.len() / 2);
 
-            if len % 2 != 0 {
+            if !len.is_multiple_of(2) {
                 self.action_if_odd.exec(&mut rng, &mut genomes, &mut output);
             }
 
-            debug_assert!(genomes.len() % 2 == 0);
+            debug_assert!(genomes.len().is_multiple_of(2));
 
             #[cfg(not(feature = "rayon"))]
             {
                 use itertools::Itertools;
 
-                output.extend(genomes
-                    .drain(..)
-                    .tuples()
-                    .map(|(a, b)| match self.knockout_fn.knockout(&a, &b) {
-                        KnockoutWinner::First => a,
-                        KnockoutWinner::Second => b,
-                    })
-                    .collect::<Vec<_>>()
+                output.extend(
+                    genomes
+                        .drain(..)
+                        .tuples()
+                        .map(|(a, b)| match self.knockout_fn.knockout(&a, &b) {
+                            KnockoutWinner::First => a,
+                            KnockoutWinner::Second => b,
+                        })
+                        .collect::<Vec<_>>(),
                 );
             }
 
             #[cfg(feature = "rayon")]
             {
-                output.extend(genomes
-                    .par_drain(..)
-                    .chunks(2)
-                    .map(|mut c| c.remove(<KnockoutWinner as Into<usize>>::into(self.knockout_fn.knockout(&c[0], &c[1]))))
-                    .collect::<Vec<_>>()
+                output.extend(
+                    genomes
+                        .par_drain(..)
+                        .chunks(2)
+                        .map(|mut c| {
+                            c.remove(<KnockoutWinner as Into<usize>>::into(
+                                self.knockout_fn.knockout(&c[0], &c[1]),
+                            ))
+                        })
+                        .collect::<Vec<_>>(),
                 );
             }
 

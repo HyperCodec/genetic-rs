@@ -26,7 +26,9 @@ struct MyGenome {
 
 // required in all of the builtin Repopulators as requirements of `Mitosis` and `Crossover`
 impl RandomlyMutable for MyGenome {
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
+    type Context = (); // empty context for a simple mutation
+    
+    fn mutate(&mut self, _ctx: &(), rate: f32, rng: &mut impl Rng) {
         self.field1 += rng.random::<f32>() * rate;
     }
 }
@@ -45,14 +47,14 @@ fn my_fitness_fn(ent: &MyGenome) -> f32 {
 }
 
 fn main() {
+    let mut rng = rand::rng();
     let mut sim = GeneticSim::new(
         // you must provide a random starting population. 
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
         // in this case, the compiler can infer the type of `Vec::gen_random` because of the input of `my_fitness_fn`.
-        // this is the `rayon` feature signature.
-        Vec::gen_random(100),
+        Vec::gen_random(&mut rng, 100),
         FitnessEliminator::new_with_default(my_fitness_fn),
-        MitosisRepopulator::new(0.25), // 25% mutation rate
+        MitosisRepopulator::new(0.25, ()), // 25% mutation rate, empty context
     );
  
     // perform evolution (100 gens)
@@ -62,7 +64,7 @@ fn main() {
 }
 ```
 
-That is the minimal code for a working genetic algorithm on default features (+ rayon). You can [read the docs](https://docs.rs/genetic-rs) or [check the examples](/genetic-rs/examples/) for more complicated systems. I highly recommend looking into crossover reproduction, as it tends to produce better results than mitosis.
+That is the minimal code for a working genetic algorithm on default features. You can [read the docs](https://docs.rs/genetic-rs) or [check the examples](/genetic-rs/examples/) for more complicated systems. I highly recommend looking into crossover reproduction, as it tends to produce better results than mitosis.
 
 ### License
 This project falls under the `MIT` license.

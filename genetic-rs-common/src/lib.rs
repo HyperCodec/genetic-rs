@@ -119,7 +119,7 @@ pub trait GenerateRandom {
 }
 
 /// Blanket trait used on collections that contain objects implementing [`GenerateRandom`]
-#[cfg(all(feature = "genrand", not(feature = "rayon")))]
+#[cfg(feature = "genrand")]
 #[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandomCollection<T>
 where
@@ -131,15 +131,14 @@ where
 
 /// Rayon version of the [`GenerateRandomCollection`] trait
 #[cfg(all(feature = "genrand", feature = "rayon"))]
-pub trait GenerateRandomCollection<T>
+pub trait GenerateRandomCollectionParallel<T>
 where
     T: GenerateRandom + Send,
 {
     /// Generate a random collection of the inner objects with the given amount. Does not pass in rng like the sync counterpart.
-    fn gen_random(amount: usize) -> Self;
+    fn par_gen_random(amount: usize) -> Self;
 }
 
-#[cfg(not(feature = "rayon"))]
 impl<C, T> GenerateRandomCollection<T> for C
 where
     C: FromIterator<T>,
@@ -151,12 +150,12 @@ where
 }
 
 #[cfg(feature = "rayon")]
-impl<C, T> GenerateRandomCollection<T> for C
+impl<C, T> GenerateRandomCollectionParallel<T> for C
 where
     C: FromParallelIterator<T>,
     T: GenerateRandom + Send,
 {
-    fn gen_random(amount: usize) -> Self {
+    fn par_gen_random(amount: usize) -> Self {
         (0..amount)
             .into_par_iter()
             .map(|_| T::gen_random(&mut rand::rng()))

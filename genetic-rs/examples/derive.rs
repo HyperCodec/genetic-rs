@@ -1,39 +1,35 @@
 use genetic_rs::prelude::*;
 
-#[derive(Clone, Debug)]
-struct TestGene {
-    a: f32,
-}
+struct Context1;
+struct Context2;
 
-impl RandomlyMutable for TestGene {
-    fn mutate(&mut self, rate: f32, rng: &mut impl Rng) {
-        self.a += rng.random_range(-1.0..1.0) * rate;
+#[derive(Clone, Mitosis, Debug)]
+struct Foo1(f32);
+
+impl RandomlyMutable for Foo1 {
+    type Context = Context1;
+
+    fn mutate(&mut self, _ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
+        self.0 += rng.random_range(-rate..rate);
     }
 }
 
-#[cfg(feature = "crossover")]
-impl Crossover for TestGene {
-    fn crossover(&self, other: &Self, rate: f32, rng: &mut impl Rng) -> Self {
-        Self {
-            a: (self.a + other.a + rng.random_range(-1.0..1.0) * rate) / 2.,
-        }
+#[derive(Clone, Mitosis, Debug)]
+struct Foo2(f32);
+
+impl RandomlyMutable for Foo2 {
+    type Context = Context2;
+
+    fn mutate(&mut self, _ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
+        self.0 += rng.random_range(-rate..rate);
     }
 }
 
-impl GenerateRandom for TestGene {
-    fn gen_random(rng: &mut impl Rng) -> Self {
-        Self {
-            a: rng.random_range(-1.0..1.0),
-        }
-    }
-}
-
-// using the derive macros here is only useful if the fields are not related to each other
-#[derive(RandomlyMutable, Mitosis, GenerateRandom, Clone, Debug)]
-#[cfg_attr(feature = "crossover", derive(Crossover))]
-struct MyDNA {
-    g1: TestGene,
-    g2: TestGene,
+#[derive(Clone, RandomlyMutable, Mitosis, Debug)]
+#[randmut(create_context = BarCtx)]
+struct Bar {
+    a: Foo1,
+    b: Foo2,
 }
 
 fn main() {
