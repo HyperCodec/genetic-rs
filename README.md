@@ -11,7 +11,7 @@ First off, this crate comes with the `builtin`, `crossover`, and `genrand` featu
 
 ### How to Use
 > [!NOTE] 
-> If you are interested in implementing NEAT with this, or just want a more complex example, try out the [neat](https://crates.io/crates/neat) crate
+> If you are interested in implementing NEAT with this, or just want a more complex example, check out the [neat](https://crates.io/crates/neat) crate
 
 Here's a simple genetic algorithm:
 
@@ -33,7 +33,7 @@ impl RandomlyMutable for MyGenome {
     }
 }
 
-// allows us to use `Vec::gen_random` for the initial population. note that `Vec::gen_random` has a slightly different function signature depending on whether the `rayon` feature is enabled.
+// allows us to use `Vec::gen_random` for the initial population. note that with the `rayon` feature, we can also use `Vec::par_gen_random`.
 impl GenerateRandom for MyGenome {
     fn gen_random(rng: &mut impl Rng) -> Self {
         Self { field1: rng.random() }
