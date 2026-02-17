@@ -1,6 +1,8 @@
 extern crate proc_macro;
 
 use darling::FromAttributes;
+use darling::FromMeta;
+use darling::util::PathList;
 use proc_macro::TokenStream;
 use quote::quote;
 use quote::quote_spanned;
@@ -103,7 +105,13 @@ pub fn mitosis_derive(input: TokenStream) -> TokenStream {
 #[darling(attributes(randmut, crossover))]
 struct ContextArgs {
     with_context: Option<syn::Path>,
-    create_context: Option<syn::Ident>,
+    create_context: Option<CreateContext>,
+}
+
+#[derive(FromMeta)]
+struct CreateContext {
+    name: syn::Ident,
+    derive: Option<PathList>,
 }
 
 fn create_context_helper(
@@ -124,7 +132,14 @@ fn create_context_helper(
         panic!("cannot have both create_context and with_context");
     }
 
-    if let Some(ident) = args.create_context {
+    if let Some(create_ctx) = args.create_context {
+        let ident = &create_ctx.name;
+        let derives = create_ctx.derive.map(|paths| {
+            quote! {
+                #[derive(#(#paths,)*)]
+            }
+        });
+
         match &ast.data {
             Data::Struct(s) => {
                 let mut inner = Vec::<proc_macro2::TokenStream>::new();
@@ -150,13 +165,13 @@ fn create_context_helper(
 
                 if tuple_struct {
                     return (
-                        Some(quote! { #doc #vis struct #ident (#inner);}),
+                        Some(quote! { #doc #derives #vis struct #ident (#inner);}),
                         Some(ident.to_token_stream()),
                     );
                 }
 
                 return (
-                    Some(quote! { #doc #vis struct #ident {#inner};}),
+                    Some(quote! { #doc #derives #vis struct #ident {#inner};}),
                     Some(ident.to_token_stream()),
                 );
             }

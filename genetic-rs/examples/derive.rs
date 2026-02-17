@@ -1,6 +1,11 @@
+#![allow(dead_code)]
+
 use genetic_rs::prelude::*;
 
+#[derive(Clone, Debug)]
 struct Context1;
+
+#[derive(Clone, Debug)]
 struct Context2;
 
 #[derive(Clone, Mitosis, Debug)]
@@ -26,7 +31,7 @@ impl RandomlyMutable for Foo2 {
 }
 
 #[derive(Clone, RandomlyMutable, Mitosis, Debug)]
-#[randmut(create_context = BarCtx)]
+#[randmut(create_context(name = BarCtx, derive(Clone, Debug)))]
 struct Bar {
     a: Foo1,
     b: Foo2,
