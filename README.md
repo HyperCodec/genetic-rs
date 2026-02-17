@@ -20,6 +20,7 @@ use genetic_rs::prelude::*;
 
 // `Mitosis` can be derived if both `Clone` and `RandomlyMutable` are present.
 #[derive(Clone, Debug, Mitosis)]
+#[mitosis(use_randmut = true)]
 struct MyGenome {
     field1: f32,
 }
