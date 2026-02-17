@@ -2,13 +2,14 @@
 
 use genetic_rs::prelude::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct Context1;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct Context2;
 
 #[derive(Clone, Mitosis, Debug)]
+#[mitosis(use_randmut = true)]
 struct Foo1(f32);
 
 impl RandomlyMutable for Foo1 {
@@ -20,6 +21,7 @@ impl RandomlyMutable for Foo1 {
 }
 
 #[derive(Clone, Mitosis, Debug)]
+#[mitosis(use_randmut = true)]
 struct Foo2(f32);
 
 impl RandomlyMutable for Foo2 {
@@ -31,7 +33,8 @@ impl RandomlyMutable for Foo2 {
 }
 
 #[derive(Clone, RandomlyMutable, Mitosis, Debug)]
-#[randmut(create_context(name = BarCtx, derive(Clone, Debug)))]
+#[randmut(create_context(name = BarCtx, derive(Clone, Debug, Default)))]
+#[mitosis(with_context = BarCtx)]
 struct Bar {
     a: Foo1,
     b: Foo2,
