@@ -85,7 +85,7 @@ pub fn randmut_derive(input: TokenStream) -> TokenStream {
 #[darling(attributes(mitosis))]
 struct MitosisSettings {
     use_randmut: Option<bool>,
-    
+
     // darling is annoyingly restrictive and doesn't
     // let me just ignore extra fields
     #[darling(rename = "create_context")]
@@ -224,10 +224,7 @@ fn create_context_helper(
 
     let vis = ast.vis.to_token_stream();
 
-    let attr = ast
-        .attrs
-        .iter()
-        .find(|a| a.path() == &attr_path);
+    let attr = ast.attrs.iter().find(|a| a.path() == &attr_path);
     if attr.is_none() {
         return (None, None);
     }
