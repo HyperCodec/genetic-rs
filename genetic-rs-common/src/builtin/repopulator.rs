@@ -1,5 +1,4 @@
 use crate::Repopulator;
-use rand::Rng as RandRng;
 
 /// Used in other traits to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
@@ -87,6 +86,8 @@ where
 
 #[cfg(feature = "crossover")]
 mod crossover {
+    use rand::RngExt;
+
     use super::*;
 
     /// Used in crossover-reproducing [`Repopulator`]s
@@ -159,6 +160,8 @@ pub use crossover::*;
 #[cfg(feature = "speciation")]
 mod speciation {
     use std::collections::HashMap;
+
+    use rand::RngExt;
 
     use super::*;
 

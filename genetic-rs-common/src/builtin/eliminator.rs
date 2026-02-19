@@ -280,6 +280,8 @@ where
 mod knockout {
     use std::cmp::Ordering;
 
+    use rand::RngExt;
+
     use super::*;
 
     /// A distinct type to help clarify the result of a knockout function.

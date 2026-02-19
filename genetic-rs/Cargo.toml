@@ -22,14 +22,14 @@ rayon = ["genetic-rs-common/rayon"]
 derive = ["dep:genetic-rs-macros", "builtin"]
 
 [dependencies]
-genetic-rs-common = { path = "../genetic-rs-common", version = "1.1.0", default-features = false }
-genetic-rs-macros = { path = "../genetic-rs-macros", version = "1.1.0", optional = true }
+genetic-rs-common = { path = "../genetic-rs-common", version = "1.2.0", default-features = false }
+genetic-rs-macros = { path = "../genetic-rs-macros", version = "1.2.0", optional = true }
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ["cfg(publish)"] }
 
 [dev-dependencies]
-rand = "0.9.2"
+rand = "0.10.0"
 
 [[example]]
 name = "crossover"
