@@ -53,12 +53,22 @@ impl<G: FeatureBoundedGenome, T: FitnessObserver<G>> FeatureBoundedFitnessObserv
 
 #[cfg(feature = "rayon")]
 #[doc(hidden)]
-pub trait FeatureBoundedFitnessObserver<G: FeatureBoundedGenome>: FitnessObserver<G> + Send + Sync {}
+pub trait FeatureBoundedFitnessObserver<G: FeatureBoundedGenome>:
+    FitnessObserver<G> + Send + Sync
+{
+}
 #[cfg(feature = "rayon")]
-impl<G: FeatureBoundedGenome, T: FitnessObserver<G> + Send + Sync> FeatureBoundedFitnessObserver<G> for T {}
+impl<G: FeatureBoundedGenome, T: FitnessObserver<G> + Send + Sync> FeatureBoundedFitnessObserver<G>
+    for T
+{
+}
 
 /// A fitness-based eliminator that eliminates genomes based on their fitness scores.
-pub struct FitnessEliminator<F: FeatureBoundedFitnessFn<G>, G: FeatureBoundedGenome, O: FeatureBoundedFitnessObserver<G> = ()> {
+pub struct FitnessEliminator<
+    F: FeatureBoundedFitnessFn<G>,
+    G: FeatureBoundedGenome,
+    O: FeatureBoundedFitnessObserver<G> = (),
+> {
     /// The fitness function used to evaluate genomes.
     pub fitness_fn: F,
 
@@ -227,7 +237,9 @@ where
     /// Panics if the fitness function or observer was not set.
     pub fn build_or_panic(self) -> FitnessEliminator<F, G, O> {
         let fitness_fn = self.fitness_fn.expect("Fitness function must be set");
-        let observer = self.observer.expect("Observer must be set. Use build_or_default() if the observer implements Default.");
+        let observer = self.observer.expect(
+            "Observer must be set. Use build_or_default() if the observer implements Default.",
+        );
         FitnessEliminator::new(fitness_fn, self.threshold, observer)
     }
 }
