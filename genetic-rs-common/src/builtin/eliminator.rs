@@ -183,6 +183,35 @@ mod knockout {
         }
     }
 
+    /// A knockout function that uses a fitness function to determine the winner.
+    pub struct FitnessKnockoutFn<F: FitnessFn<G>, G: FeatureBoundedGenome> {
+        /// The fitness function used to evaluate the genomes.
+        pub fitness_fn: F,
+        _marker: std::marker::PhantomData<G>,
+    }
+
+    impl<F: FitnessFn<G>, G: FeatureBoundedGenome> FitnessKnockoutFn<F, G> {
+        /// Creates a new [`FitnessKnockoutFn`] with a given fitness function.
+        pub fn new(fitness_fn: F) -> Self {
+            Self {
+                fitness_fn,
+                _marker: std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<F, G> KnockoutFn<G> for FitnessKnockoutFn<F, G>
+    where
+        F: FeatureBoundedFitnessFn<G>,
+        G: FeatureBoundedGenome,
+    {
+        fn knockout(&self, a: &G, b: &G) -> KnockoutWinner {
+            let afit = self.fitness_fn.fitness(a);
+            let bfit = self.fitness_fn.fitness(b);
+            afit.total_cmp(&bfit).into()
+        }
+    }
+
     #[doc(hidden)]
     #[cfg(not(feature = "rayon"))]
     pub trait FeatureBoundedKnockoutFn<G>: KnockoutFn<G> {}
