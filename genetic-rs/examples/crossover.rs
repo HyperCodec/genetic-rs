@@ -41,7 +41,7 @@ fn main() {
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
-        FitnessEliminator::new_with_default(fitness),
+        FitnessEliminator::new_without_observer(fitness),
         CrossoverRepopulator::new(0.25, ()), // 25% mutation rate
     );
 

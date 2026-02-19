@@ -34,38 +34,56 @@ pub trait FeatureBoundedFitnessFn<G: FeatureBoundedGenome>: FitnessFn<G> + Send 
 #[cfg(feature = "rayon")]
 impl<G: FeatureBoundedGenome, T: FitnessFn<G> + Send + Sync> FeatureBoundedFitnessFn<G> for T {}
 
+/// A trait for observing fitness scores. This can be used to implement things like logging or statistics collection.
+pub trait FitnessObserver<G> {
+    /// Observes the fitness scores of a generation of genomes.
+    fn observe(&self, fitnesses: &[(G, f32)]);
+}
+
+impl<G> FitnessObserver<G> for () {
+    fn observe(&self, _fitnesses: &[(G, f32)]) {}
+}
+
 /// A fitness-based eliminator that eliminates genomes based on their fitness scores.
-pub struct FitnessEliminator<F: FitnessFn<G>, G: FeatureBoundedGenome> {
+pub struct FitnessEliminator<F: FeatureBoundedFitnessFn<G>, G: FeatureBoundedGenome, O: FitnessObserver<G> = ()> {
     /// The fitness function used to evaluate genomes.
     pub fitness_fn: F,
 
     /// The percentage of genomes to keep. Must be between 0.0 and 1.0.
     pub threshold: f32,
 
+    /// The fitness observer used to observe fitness scores.
+    pub observer: O,
+
     _marker: std::marker::PhantomData<G>,
 }
 
-impl<F, G> FitnessEliminator<F, G>
+impl<F, G, O> FitnessEliminator<F, G, O>
 where
     F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
+    O: FitnessObserver<G>,
 {
+    /// The default threshold for the [`FitnessEliminator`]. This is the percentage of genomes to keep. All genomes below the median fitness will be eliminated.
+    pub const DEFAULT_THRESHOLD: f32 = 0.5;
+
     /// Creates a new [`FitnessEliminator`] with a given fitness function and threshold.
     /// Panics if the threshold is not between 0.0 and 1.0.
-    pub fn new(fitness_fn: F, threshold: f32) -> Self {
+    pub fn new(fitness_fn: F, threshold: f32, observer: O) -> Self {
         if !(0.0..=1.0).contains(&threshold) {
             panic!("Threshold must be between 0.0 and 1.0");
         }
         Self {
             fitness_fn,
             threshold,
+            observer,
             _marker: std::marker::PhantomData,
         }
     }
 
     /// Creates a new [`FitnessEliminator`] with a default threshold of 0.5 (all genomes below median fitness are eliminated).
-    pub fn new_with_default(fitness_fn: F) -> Self {
-        Self::new(fitness_fn, 0.5)
+    pub fn new_with_default_threshold(fitness_fn: F, observer: O) -> Self {
+        Self::new(fitness_fn, Self::DEFAULT_THRESHOLD, observer)
     }
 
     /// Calculates the fitness of each genome and sorts them by fitness.
@@ -97,18 +115,56 @@ where
         fitnesses.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
         fitnesses
     }
+
+    /// Creates a new builder for [`FitnessEliminator`] to make it easier to construct with default parameters.
+    pub fn builder() -> FitnessEliminatorBuilder<F, G, O> {
+        FitnessEliminatorBuilder::default()
+    }
 }
 
-impl<F, G> Eliminator<G> for FitnessEliminator<F, G>
+impl<F, G, O> FitnessEliminator<F, G, O>
 where
     F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
+    O: FitnessObserver<G> + Default,
+{
+    /// Creates a new [`FitnessEliminator`] with a default observer that does nothing.
+    pub fn new_with_default_observer(fitness_fn: F, threshold: f32) -> Self {
+        Self::new(fitness_fn, threshold, O::default())
+    }
+
+    /// Creates a new [`FitnessEliminator`] with a default threshold of 0.5 and a default observer.
+    /// You must specify the observer type explicitly, e.g., `FitnessEliminator::new_with_default::<()>(fitness_fn)`.
+    pub fn new_with_default(fitness_fn: F) -> Self {
+        Self::new_with_default_observer(fitness_fn, Self::DEFAULT_THRESHOLD)
+    }
+}
+
+/// Implementation specifically for the unit type `()` observer (the default).
+impl<F, G> FitnessEliminator<F, G, ()>
+where
+    F: FeatureBoundedFitnessFn<G>,
+    G: FeatureBoundedGenome,
+{
+    /// Creates a new [`FitnessEliminator`] with a default threshold of 0.5 and unit observer `()`.
+    /// This is a convenience function that doesn't require explicit type annotations.
+    pub fn new_without_observer(fitness_fn: F) -> Self {
+        Self::new(fitness_fn, Self::DEFAULT_THRESHOLD, ())
+    }
+}
+
+impl<F, G, O> Eliminator<G> for FitnessEliminator<F, G, O>
+where
+    F: FeatureBoundedFitnessFn<G>,
+    G: FeatureBoundedGenome,
+    O: FitnessObserver<G>,
 {
     #[cfg(not(feature = "rayon"))]
     fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
         fitnesses.truncate(median_index as usize + 1);
+        self.observer.observe(&fitnesses);
         fitnesses.into_iter().map(|(g, _)| g).collect()
     }
 
@@ -117,7 +173,81 @@ where
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
         fitnesses.truncate(median_index as usize + 1);
+        self.observer.observe(&fitnesses);
         fitnesses.into_par_iter().map(|(g, _)| g).collect()
+    }
+}
+
+/// A builder for [`FitnessEliminator`] to make it easier to construct with default parameters.
+pub struct FitnessEliminatorBuilder<F: FitnessFn<G>, G, O: FitnessObserver<G> = ()> {
+    fitness_fn: Option<F>,
+    threshold: f32,
+    observer: Option<O>,
+    _marker: std::marker::PhantomData<G>,
+}
+
+impl<F, G, O> FitnessEliminatorBuilder<F, G, O>
+where
+    F: FitnessFn<G>,
+    G: FeatureBoundedGenome,
+    O: FitnessObserver<G>,
+{
+    /// Sets the fitness function for the [`FitnessEliminator`].
+    pub fn fitness_fn(mut self, fitness_fn: F) -> Self {
+        self.fitness_fn = Some(fitness_fn);
+        self
+    }
+
+    /// Sets the threshold for the [`FitnessEliminator`].
+    pub fn threshold(mut self, threshold: f32) -> Self {
+        self.threshold = threshold;
+        self
+    }
+
+    /// Sets the observer for the [`FitnessEliminator`].
+    pub fn observer(mut self, observer: O) -> Self {
+        self.observer = Some(observer);
+        self
+    }
+
+    /// Builds the [`FitnessEliminator`].
+    /// Panics if the fitness function or observer was not set.
+    pub fn build_or_panic(self) -> FitnessEliminator<F, G, O> {
+        let fitness_fn = self.fitness_fn.expect("Fitness function must be set");
+        let observer = self.observer.expect("Observer must be set. Use build_or_default() if the observer implements Default.");
+        FitnessEliminator::new(fitness_fn, self.threshold, observer)
+    }
+}
+
+impl<F, G, O> FitnessEliminatorBuilder<F, G, O>
+where
+    F: FitnessFn<G>,
+    G: FeatureBoundedGenome,
+    O: FitnessObserver<G> + Default,
+{
+    /// Builds the [`FitnessEliminator`].
+    /// If no observer was set, uses the default observer implementation.
+    /// This method is only available when the observer type implements [`Default`].
+    pub fn build(self) -> FitnessEliminator<F, G, O> {
+        let fitness_fn = self.fitness_fn.expect("Fitness function must be set");
+        let observer = self.observer.unwrap_or_default();
+        FitnessEliminator::new(fitness_fn, self.threshold, observer)
+    }
+}
+
+impl<F, G, O> Default for FitnessEliminatorBuilder<F, G, O>
+where
+    F: FitnessFn<G>,
+    G: FeatureBoundedGenome,
+    O: FitnessObserver<G>,
+{
+    fn default() -> Self {
+        Self {
+            fitness_fn: None,
+            threshold: 0.5,
+            observer: None,
+            _marker: std::marker::PhantomData,
+        }
     }
 }
 
