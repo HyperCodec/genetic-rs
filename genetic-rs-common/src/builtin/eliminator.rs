@@ -44,12 +44,21 @@ impl<G> FitnessObserver<G> for () {
     fn observe(&self, _fitnesses: &[(G, f32)]) {}
 }
 
+#[cfg(not(feature = "rayon"))]
+#[doc(hidden)]
+pub trait FeatureBoundedFitnessObserver<G: FeatureBoundedGenome>: FitnessObserver<G> {}
+
+#[cfg(not(feature = "rayon"))]
+impl<G: FeatureBoundedGenome, T: FitnessObserver<G>> FeatureBoundedFitnessObserver<G> for T {}
+
+#[cfg(feature = "rayon")]
+#[doc(hidden)]
+pub trait FeatureBoundedFitnessObserver<G: FeatureBoundedGenome>: FitnessObserver<G> + Send + Sync {}
+#[cfg(feature = "rayon")]
+impl<G: FeatureBoundedGenome, T: FitnessObserver<G> + Send + Sync> FeatureBoundedFitnessObserver<G> for T {}
+
 /// A fitness-based eliminator that eliminates genomes based on their fitness scores.
-pub struct FitnessEliminator<
-    F: FeatureBoundedFitnessFn<G>,
-    G: FeatureBoundedGenome,
-    O: FitnessObserver<G> = (),
-> {
+pub struct FitnessEliminator<F: FeatureBoundedFitnessFn<G>, G: FeatureBoundedGenome, O: FeatureBoundedFitnessObserver<G> = ()> {
     /// The fitness function used to evaluate genomes.
     pub fitness_fn: F,
 
@@ -66,7 +75,7 @@ impl<F, G, O> FitnessEliminator<F, G, O>
 where
     F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
-    O: FitnessObserver<G>,
+    O: FeatureBoundedFitnessObserver<G>,
 {
     /// The default threshold for the [`FitnessEliminator`]. This is the percentage of genomes to keep. All genomes below the median fitness will be eliminated.
     pub const DEFAULT_THRESHOLD: f32 = 0.5;
@@ -130,7 +139,7 @@ impl<F, G, O> FitnessEliminator<F, G, O>
 where
     F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
-    O: FitnessObserver<G> + Default,
+    O: FeatureBoundedFitnessObserver<G> + Default,
 {
     /// Creates a new [`FitnessEliminator`] with a default observer that does nothing.
     pub fn new_with_default_observer(fitness_fn: F, threshold: f32) -> Self {
@@ -161,7 +170,7 @@ impl<F, G, O> Eliminator<G> for FitnessEliminator<F, G, O>
 where
     F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
-    O: FitnessObserver<G>,
+    O: FeatureBoundedFitnessObserver<G>,
 {
     #[cfg(not(feature = "rayon"))]
     fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
@@ -192,9 +201,9 @@ pub struct FitnessEliminatorBuilder<F: FitnessFn<G>, G, O: FitnessObserver<G> = 
 
 impl<F, G, O> FitnessEliminatorBuilder<F, G, O>
 where
-    F: FitnessFn<G>,
+    F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
-    O: FitnessObserver<G>,
+    O: FeatureBoundedFitnessObserver<G>,
 {
     /// Sets the fitness function for the [`FitnessEliminator`].
     pub fn fitness_fn(mut self, fitness_fn: F) -> Self {
@@ -218,18 +227,16 @@ where
     /// Panics if the fitness function or observer was not set.
     pub fn build_or_panic(self) -> FitnessEliminator<F, G, O> {
         let fitness_fn = self.fitness_fn.expect("Fitness function must be set");
-        let observer = self.observer.expect(
-            "Observer must be set. Use build_or_default() if the observer implements Default.",
-        );
+        let observer = self.observer.expect("Observer must be set. Use build_or_default() if the observer implements Default.");
         FitnessEliminator::new(fitness_fn, self.threshold, observer)
     }
 }
 
 impl<F, G, O> FitnessEliminatorBuilder<F, G, O>
 where
-    F: FitnessFn<G>,
+    F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
-    O: FitnessObserver<G> + Default,
+    O: FeatureBoundedFitnessObserver<G> + Default,
 {
     /// Builds the [`FitnessEliminator`].
     /// If no observer was set, uses the default observer implementation.
@@ -243,9 +250,9 @@ where
 
 impl<F, G, O> Default for FitnessEliminatorBuilder<F, G, O>
 where
-    F: FitnessFn<G>,
+    F: FeatureBoundedFitnessFn<G>,
     G: FeatureBoundedGenome,
-    O: FitnessObserver<G>,
+    O: FeatureBoundedFitnessObserver<G>,
 {
     fn default() -> Self {
         Self {
