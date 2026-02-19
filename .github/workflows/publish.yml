@@ -20,4 +20,4 @@ jobs:
       - name: "Publish macros"
         run: cargo +nightly publish -p genetic-rs-macros
       - name: "Publish main"
-        run: cargo +nightly publish -p genetic-rs --config publish
+        run: cargo +nightly publish -p genetic-rs --config publish=true
