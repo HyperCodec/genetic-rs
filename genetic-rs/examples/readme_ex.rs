@@ -49,7 +49,7 @@ fn main() {
         // size will be preserved in builtin nextgen fns, but it is not required to keep a constant size if you were to build your own nextgen function.
         // in this case, you do not need to specify a type for `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
-        FitnessEliminator::new_with_default(my_fitness_fn),
+        FitnessEliminator::new_without_observer(my_fitness_fn),
         MitosisRepopulator::new(0.25, ()), // 25% mutation rate
     );
 

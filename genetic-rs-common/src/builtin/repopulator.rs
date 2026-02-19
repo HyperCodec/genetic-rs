@@ -1,5 +1,4 @@
 use crate::Repopulator;
-use rand::Rng as RandRng;
 
 /// Used in other traits to randomly mutate genomes a given amount
 pub trait RandomlyMutable {
@@ -10,14 +9,40 @@ pub trait RandomlyMutable {
     fn mutate(&mut self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng);
 }
 
+// TODO rayon version
+impl<'a, T: RandomlyMutable + 'a, I: Iterator<Item = &'a mut T>> RandomlyMutable for I {
+    type Context = T::Context;
+
+    fn mutate(&mut self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
+        self.for_each(|x| x.mutate(ctx, rate, rng));
+    }
+}
+
 /// Used in dividually-reproducing [`Repopulator`]s
 pub trait Mitosis: Clone {
     /// Simulation-wide context required for this mitosis implementation.
     type Context;
 
-    /// Create a new child with mutation. Similar to [RandomlyMutable::mutate], but returns a new instance instead of modifying the original.
+    /// Create a new child with mutation. Similar to [`RandomlyMutable::mutate`], but returns a new instance instead of modifying the original.
     fn divide(&self, ctx: &<Self as Mitosis>::Context, rate: f32, rng: &mut impl rand::Rng)
         -> Self;
+}
+
+impl<T: Mitosis> Mitosis for Vec<T> {
+    type Context = T::Context;
+
+    fn divide(
+        &self,
+        ctx: &<Self as Mitosis>::Context,
+        rate: f32,
+        rng: &mut impl rand::Rng,
+    ) -> Self {
+        let mut child = Vec::with_capacity(self.len());
+        for gene in self {
+            child.push(gene.divide(ctx, rate, rng));
+        }
+        child
+    }
 }
 
 /// Repopulator that uses division reproduction to create new genomes.
@@ -61,6 +86,8 @@ where
 
 #[cfg(feature = "crossover")]
 mod crossover {
+    use rand::RngExt;
+
     use super::*;
 
     /// Used in crossover-reproducing [`Repopulator`]s
@@ -133,6 +160,8 @@ pub use crossover::*;
 #[cfg(feature = "speciation")]
 mod speciation {
     use std::collections::HashMap;
+
+    use rand::RngExt;
 
     use super::*;
 

@@ -20,6 +20,7 @@ use genetic_rs::prelude::*;
 
 // `Mitosis` can be derived if both `Clone` and `RandomlyMutable` are present.
 #[derive(Clone, Debug, Mitosis)]
+#[mitosis(use_randmut = true)]
 struct MyGenome {
     field1: f32,
 }
@@ -53,7 +54,7 @@ fn main() {
         // size will be preserved in builtin repopulators, but it is not required to keep a constant size if you were to build your own.
         // in this case, the compiler can infer the type of `Vec::gen_random` because of the input of `my_fitness_fn`.
         Vec::gen_random(&mut rng, 100),
-        FitnessEliminator::new_with_default(my_fitness_fn),
+        FitnessEliminator::new_without_observer(my_fitness_fn),
         MitosisRepopulator::new(0.25, ()), // 25% mutation rate, empty context
     );
  
