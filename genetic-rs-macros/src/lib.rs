@@ -4,198 +4,32 @@ use darling::util::PathList;
 use darling::FromAttributes;
 use darling::FromMeta;
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use quote::quote_spanned;
 use quote::ToTokens;
 use syn::parse_quote;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Data, DeriveInput};
+use syn::{parse_macro_input, Data, DeriveInput, Fields};
 
-#[proc_macro_derive(RandomlyMutable, attributes(randmut))]
-pub fn randmut_derive(input: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(input as DeriveInput);
-
-    let (def_ctx, mut ctx_ident) =
-        create_context_helper(&ast, parse_quote!(RandomlyMutable), parse_quote!(randmut));
-    let custom_context = ctx_ident.is_some();
-
-    let name = ast.ident;
-
-    match ast.data {
-        Data::Struct(s) => {
-            let mut inner = Vec::new();
-
-            for (i, field) in s.fields.into_iter().enumerate() {
-                let ty = field.ty;
-                let span = ty.span();
-
-                if ctx_ident.is_none() {
-                    ctx_ident = Some(
-                        quote_spanned! {span=> <#ty as genetic_rs_common::prelude::RandomlyMutable>::Context },
-                    );
-                }
-
-                if let Some(field_name) = field.ident {
-                    if custom_context {
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, &ctx.#field_name, rate, rng);
-                        });
-                    } else {
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, ctx, rate, rng);
-                        });
-                    }
-                } else if custom_context {
-                    inner.push(quote_spanned! {span=>
-                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, &ctx.#i, rate, rng);
-                    });
-                } else {
-                    inner.push(quote_spanned! {span=>
-                        <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#i, ctx, rate, rng);
-                    });
-                }
-            }
-
-            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
-
-            quote! {
-                #[automatically_derived]
-                impl genetic_rs_common::prelude::RandomlyMutable for #name {
-                    type Context = #ctx_ident;
-
-                    fn mutate(&mut self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
-                        #inner
-                    }
-                }
-
-                #def_ctx
-            }
-            .into()
-        }
-        Data::Enum(_e) => {
-            panic!("enums not yet supported");
-        }
-        Data::Union(_u) => {
-            panic!("unions not yet supported");
-        }
-    }
+/// Determines the context handling strategy for a derive macro.
+enum ContextKind {
+    /// No context attribute found; all fields share a single context passed directly.
+    Shared,
+    /// `create_context` or `with_context` was used; context is accessed per field.
+    /// For `create_context`, a new context struct is generated (see [`ContextInfo::ctx_def`]).
+    /// For `with_context`, an existing type is referenced with field access.
+    PerField,
 }
 
-#[derive(FromAttributes)]
-#[darling(attributes(mitosis))]
-struct MitosisSettings {
-    use_randmut: Option<bool>,
-
-    // darling is annoyingly restrictive and doesn't
-    // let me just ignore extra fields
-    #[darling(rename = "create_context")]
-    _create_context: Option<CreateContext>,
-
-    #[darling(rename = "with_context")]
-    _with_context: Option<syn::Path>,
-}
-
-#[proc_macro_derive(Mitosis, attributes(mitosis))]
-pub fn mitosis_derive(input: TokenStream) -> TokenStream {
-    let ast = parse_macro_input!(input as DeriveInput);
-
-    let name = &ast.ident;
-
-    let mitosis_settings = MitosisSettings::from_attributes(&ast.attrs).unwrap();
-    if mitosis_settings.use_randmut.is_some() && mitosis_settings.use_randmut.unwrap() {
-        quote! {
-            #[automatically_derived]
-            impl genetic_rs_common::prelude::Mitosis for #name {
-                type Context = <Self as genetic_rs_common::prelude::RandomlyMutable>::Context;
-
-                fn divide(&self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
-                    let mut child = self.clone();
-                    <Self as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut child, ctx, rate, rng);
-                    child
-                }
-            }
-        }
-        .into()
-    } else {
-        let (def_ctx, mut ctx_ident) =
-            create_context_helper(&ast, parse_quote!(RandomlyMutable), parse_quote!(mitosis));
-        let custom_context = ctx_ident.is_some();
-
-        let name = ast.ident;
-
-        match ast.data {
-            Data::Struct(s) => {
-                let mut is_tuple_struct = false;
-                let mut inner = Vec::new();
-
-                for (i, field) in s.fields.into_iter().enumerate() {
-                    let ty = field.ty;
-                    let span = ty.span();
-
-                    if ctx_ident.is_none() {
-                        ctx_ident = Some(
-                            quote_spanned! {span=> <#ty as genetic_rs_common::prelude::Mitosis>::Context },
-                        );
-                    }
-
-                    if let Some(field_name) = field.ident {
-                        if custom_context {
-                            inner.push(quote_spanned! {span=>
-                                #field_name: <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#field_name, &ctx.#field_name, rate, rng),
-                            });
-                        } else {
-                            inner.push(quote_spanned! {span=>
-                                #field_name: <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#field_name, ctx, rate, rng),
-                            });
-                        }
-                    } else if custom_context {
-                        is_tuple_struct = true;
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#i, &ctx.#i, rate, rng),
-                        });
-                    } else {
-                        is_tuple_struct = true;
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#i, ctx, rate, rng),
-                        });
-                    }
-                }
-
-                let inner: proc_macro2::TokenStream = inner.into_iter().collect();
-                let child = if is_tuple_struct {
-                    quote! {
-                        Self(#inner)
-                    }
-                } else {
-                    quote! {
-                        Self {
-                            #inner
-                        }
-                    }
-                };
-
-                quote! {
-                    #[automatically_derived]
-                    impl genetic_rs_common::prelude::Mitosis for #name {
-                        type Context = #ctx_ident;
-
-                        fn divide(&self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
-                            #child
-                        }
-                    }
-
-                    #def_ctx
-                }
-                .into()
-            }
-            Data::Enum(_e) => {
-                panic!("enums not yet supported");
-            }
-            Data::Union(_u) => {
-                panic!("unions not yet supported");
-            }
-        }
-    }
+/// Result of resolving context for a struct derive.
+struct ContextInfo {
+    /// The context type token stream (the `type Context = ...` part).
+    ctx_type: TokenStream2,
+    /// Optional token stream defining a new context struct (only for `PerField`).
+    ctx_def: Option<TokenStream2>,
+    /// How to pass the context to each field's method.
+    kind: ContextKind,
 }
 
 #[derive(FromMeta)]
@@ -210,237 +44,391 @@ struct CreateContext {
     derive: Option<PathList>,
 }
 
-fn create_context_helper(
+#[derive(FromAttributes)]
+#[darling(attributes(mitosis))]
+struct MitosisSettings {
+    use_randmut: Option<bool>,
+
+    // darling requires all possible fields to be listed to avoid unknown field errors
+    #[darling(rename = "create_context")]
+    _create_context: Option<CreateContext>,
+
+    #[darling(rename = "with_context")]
+    _with_context: Option<syn::Path>,
+}
+
+/// Resolves the context info from the attribute on an AST node.
+///
+/// `trait_name` is the trait whose `Context` associated type is used when
+/// generating a per-field context struct (i.e., for `create_context`).
+/// `attr_path` is the path of the attribute to look for (e.g. `randmut`).
+///
+/// If the attribute is absent, or if it does not contain `create_context` or
+/// `with_context`, returns `None` and the caller should fall back to inferring
+/// the context type from the first struct field.
+fn resolve_context(
     ast: &DeriveInput,
     trait_name: syn::Ident,
     attr_path: syn::Path,
-) -> (
-    Option<proc_macro2::TokenStream>,
-    Option<proc_macro2::TokenStream>,
-) {
+    fallback_ctx: TokenStream2,
+) -> ContextInfo {
     let name = &ast.ident;
-    let doc =
-        quote! { #[doc = concat!("Autogenerated context struct for [`", stringify!(#name), "`]")] };
-
     let vis = ast.vis.to_token_stream();
 
     let attr = ast.attrs.iter().find(|a| a.path() == &attr_path);
-    if attr.is_none() {
-        return (None, None);
-    }
 
-    let meta = &attr.unwrap().meta;
-
-    let args = ContextArgs::from_meta(meta).unwrap();
-
-    if args.create_context.is_some() && args.with_context.is_some() {
-        panic!("cannot have both create_context and with_context");
-    }
-
-    if let Some(create_ctx) = args.create_context {
-        let ident = &create_ctx.name;
-        let derives = create_ctx.derive.map(|paths| {
-            quote! {
-                #[derive(#(#paths,)*)]
+    if let Some(attr) = attr {
+        // Try to parse the attribute as ContextArgs; silently ignore if it
+        // doesn't contain context-related fields (e.g., `use_randmut`).
+        if let Ok(args) = ContextArgs::from_meta(&attr.meta) {
+            if args.create_context.is_some() && args.with_context.is_some() {
+                panic!("cannot have both create_context and with_context");
             }
-        });
 
-        match &ast.data {
-            Data::Struct(s) => {
-                let mut inner = Vec::<proc_macro2::TokenStream>::new();
-                let mut tuple_struct = false;
+            if let Some(create_ctx) = args.create_context {
+                let ident = &create_ctx.name;
+                let doc = quote! {
+                    #[doc = concat!("Autogenerated context struct for [`", stringify!(#name), "`]")]
+                };
+                let derives = create_ctx.derive.map(|paths| {
+                    quote! { #[derive(#(#paths,)*)] }
+                });
 
-                for field in &s.fields {
-                    let ty = &field.ty;
-                    let ty_span = ty.span();
+                let ctx_def = match &ast.data {
+                    Data::Struct(s) => {
+                        let fields: Vec<TokenStream2> = s
+                            .fields
+                            .iter()
+                            .map(|field| {
+                                let ty = &field.ty;
+                                let ty_span = ty.span();
+                                if let Some(field_name) = &field.ident {
+                                    quote_spanned! {ty_span=>
+                                        #vis #field_name: <#ty as genetic_rs_common::prelude::#trait_name>::Context,
+                                    }
+                                } else {
+                                    quote_spanned! {ty_span=>
+                                        #vis <#ty as genetic_rs_common::prelude::#trait_name>::Context,
+                                    }
+                                }
+                            })
+                            .collect();
+                        let fields_ts: TokenStream2 = fields.into_iter().collect();
 
-                    if let Some(field_name) = &field.ident {
-                        inner.push(quote_spanned! {ty_span=>
-                            #vis #field_name: <#ty as genetic_rs_common::prelude::#trait_name>::Context,
-                        });
-                    } else {
-                        tuple_struct = true;
-                        inner.push(quote_spanned! {ty_span=>
-                            #vis <#ty as genetic_rs_common::prelude::#trait_name>::Context,
-                        });
+                        let is_tuple = matches!(s.fields, Fields::Unnamed(_));
+                        if is_tuple {
+                            quote! { #doc #derives #vis struct #ident (#fields_ts); }
+                        } else {
+                            quote! { #doc #derives #vis struct #ident { #fields_ts } }
+                        }
                     }
-                }
+                    Data::Enum(_) => panic!("enums not supported"),
+                    Data::Union(_) => panic!("unions not supported"),
+                };
 
-                let inner: proc_macro2::TokenStream = inner.into_iter().collect();
-
-                if tuple_struct {
-                    return (
-                        Some(quote! { #doc #derives #vis struct #ident (#inner);}),
-                        Some(ident.to_token_stream()),
-                    );
-                }
-
-                return (
-                    Some(quote! { #doc #derives #vis struct #ident {#inner};}),
-                    Some(ident.to_token_stream()),
-                );
+                return ContextInfo {
+                    ctx_type: ident.to_token_stream(),
+                    ctx_def: Some(ctx_def),
+                    kind: ContextKind::PerField,
+                };
             }
-            Data::Enum(_) => panic!("enums not supported"),
-            Data::Union(_) => panic!("unions not supported"),
+
+            if let Some(with_ctx) = args.with_context {
+                return ContextInfo {
+                    ctx_type: with_ctx.to_token_stream(),
+                    ctx_def: None,
+                    kind: ContextKind::PerField,
+                };
+            }
         }
     }
 
-    if let Some(ident) = args.with_context {
-        return (None, Some(ident.to_token_stream()));
+    ContextInfo {
+        ctx_type: fallback_ctx,
+        ctx_def: None,
+        kind: ContextKind::Shared,
+    }
+}
+
+#[proc_macro_derive(RandomlyMutable, attributes(randmut))]
+pub fn randmut_derive(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let name = &ast.ident;
+
+    let Data::Struct(s) = &ast.data else {
+        panic!("enums and unions not yet supported");
+    };
+
+    // Determine the fallback context type from the first field (if any).
+    let fallback_ctx = s.fields.iter().next().map_or_else(
+        || quote! { () },
+        |f| {
+            let ty = &f.ty;
+            quote! { <#ty as genetic_rs_common::prelude::RandomlyMutable>::Context }
+        },
+    );
+
+    let ctx_info = resolve_context(
+        &ast,
+        parse_quote!(RandomlyMutable),
+        parse_quote!(randmut),
+        fallback_ctx,
+    );
+
+    let ctx_type = &ctx_info.ctx_type;
+    let ctx_def = &ctx_info.ctx_def;
+
+    let inner: TokenStream2 = s
+        .fields
+        .iter()
+        .enumerate()
+        .map(|(i, field)| {
+            let ty = &field.ty;
+            let span = ty.span();
+            let idx = syn::Index::from(i);
+            match (&field.ident, &ctx_info.kind) {
+                (Some(field_name), ContextKind::PerField) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, &ctx.#field_name, rate, rng);
+                },
+                (Some(field_name), _) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#field_name, ctx, rate, rng);
+                },
+                (None, ContextKind::PerField) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#idx, &ctx.#idx, rate, rng);
+                },
+                (None, _) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut self.#idx, ctx, rate, rng);
+                },
+            }
+        })
+        .collect();
+
+    quote! {
+        #[automatically_derived]
+        impl genetic_rs_common::prelude::RandomlyMutable for #name {
+            type Context = #ctx_type;
+
+            fn mutate(&mut self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) {
+                #inner
+            }
+        }
+
+        #ctx_def
+    }
+    .into()
+}
+
+#[proc_macro_derive(Mitosis, attributes(mitosis))]
+pub fn mitosis_derive(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let name = &ast.ident;
+
+    let mitosis_settings = MitosisSettings::from_attributes(&ast.attrs).unwrap();
+    if mitosis_settings.use_randmut.unwrap_or(false) {
+        return quote! {
+            #[automatically_derived]
+            impl genetic_rs_common::prelude::Mitosis for #name {
+                type Context = <Self as genetic_rs_common::prelude::RandomlyMutable>::Context;
+
+                fn divide(&self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
+                    let mut child = self.clone();
+                    <Self as genetic_rs_common::prelude::RandomlyMutable>::mutate(&mut child, ctx, rate, rng);
+                    child
+                }
+            }
+        }
+        .into();
     }
 
-    (None, None)
+    let Data::Struct(s) = &ast.data else {
+        panic!("enums and unions not yet supported");
+    };
+
+    let fallback_ctx = s.fields.iter().next().map_or_else(
+        || quote! { () },
+        |f| {
+            let ty = &f.ty;
+            quote! { <#ty as genetic_rs_common::prelude::Mitosis>::Context }
+        },
+    );
+
+    let ctx_info = resolve_context(
+        &ast,
+        parse_quote!(Mitosis),
+        parse_quote!(mitosis),
+        fallback_ctx,
+    );
+
+    let ctx_type = &ctx_info.ctx_type;
+    let ctx_def = &ctx_info.ctx_def;
+
+    let is_tuple_struct = matches!(s.fields, Fields::Unnamed(_));
+
+    let inner: TokenStream2 = s
+        .fields
+        .iter()
+        .enumerate()
+        .map(|(i, field)| {
+            let ty = &field.ty;
+            let span = ty.span();
+            let idx = syn::Index::from(i);
+            match (&field.ident, &ctx_info.kind) {
+                (Some(field_name), ContextKind::PerField) => quote_spanned! {span=>
+                    #field_name: <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#field_name, &ctx.#field_name, rate, rng),
+                },
+                (Some(field_name), _) => quote_spanned! {span=>
+                    #field_name: <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#field_name, ctx, rate, rng),
+                },
+                (None, ContextKind::PerField) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#idx, &ctx.#idx, rate, rng),
+                },
+                (None, _) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::Mitosis>::divide(&self.#idx, ctx, rate, rng),
+                },
+            }
+        })
+        .collect();
+
+    let child = if is_tuple_struct {
+        quote! { Self(#inner) }
+    } else {
+        quote! { Self { #inner } }
+    };
+
+    quote! {
+        #[automatically_derived]
+        impl genetic_rs_common::prelude::Mitosis for #name {
+            type Context = #ctx_type;
+
+            fn divide(&self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
+                #child
+            }
+        }
+
+        #ctx_def
+    }
+    .into()
 }
 
 #[cfg(feature = "crossover")]
 #[proc_macro_derive(Crossover, attributes(crossover))]
 pub fn crossover_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
+    let name = &ast.ident;
 
-    let (def_ctx, mut context) =
-        create_context_helper(&ast, parse_quote!(Crossover), parse_quote!(crossover));
-    let custom_context = context.is_some();
+    let Data::Struct(s) = &ast.data else {
+        panic!("enums and unions not yet supported");
+    };
 
-    let name = ast.ident;
+    let fallback_ctx = s.fields.iter().next().map_or_else(
+        || quote! { () },
+        |f| {
+            let ty = &f.ty;
+            quote! { <#ty as genetic_rs_common::prelude::Crossover>::Context }
+        },
+    );
 
-    match ast.data {
-        Data::Struct(s) => {
-            let mut inner = Vec::new();
-            let mut tuple_struct = false;
+    let ctx_info = resolve_context(
+        &ast,
+        parse_quote!(Crossover),
+        parse_quote!(crossover),
+        fallback_ctx,
+    );
 
-            for (i, field) in s.fields.into_iter().enumerate() {
-                let ty = field.ty;
-                let span = ty.span();
+    let ctx_type = &ctx_info.ctx_type;
+    let ctx_def = &ctx_info.ctx_def;
 
-                if context.is_none() {
-                    context =
-                        Some(quote! { <#ty as genetic_rs_common::prelude::Crossover>::Context });
-                }
+    let is_tuple_struct = matches!(s.fields, Fields::Unnamed(_));
 
-                if let Some(field_name) = field.ident {
-                    if custom_context {
-                        inner.push(quote_spanned! {span=>
-                            #field_name: <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#field_name, &other.#field_name, &ctx.#field_name, rate, rng),
-                        });
-                    } else {
-                        inner.push(quote_spanned! {span=>
-                            #field_name: <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#field_name, &other.#field_name, ctx, rate, rng),
-                        });
-                    }
-                } else {
-                    tuple_struct = true;
-
-                    if custom_context {
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#i, &other.#i, &ctx.#i, rate, rng),
-                        })
-                    } else {
-                        inner.push(quote_spanned! {span=>
-                            <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#i, &other.#i, ctx, rate, rng),
-                        });
-                    }
-                }
+    let inner: TokenStream2 = s
+        .fields
+        .iter()
+        .enumerate()
+        .map(|(i, field)| {
+            let ty = &field.ty;
+            let span = ty.span();
+            let idx = syn::Index::from(i);
+            match (&field.ident, &ctx_info.kind) {
+                (Some(field_name), ContextKind::PerField) => quote_spanned! {span=>
+                    #field_name: <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#field_name, &other.#field_name, &ctx.#field_name, rate, rng),
+                },
+                (Some(field_name), _) => quote_spanned! {span=>
+                    #field_name: <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#field_name, &other.#field_name, ctx, rate, rng),
+                },
+                (None, ContextKind::PerField) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#idx, &other.#idx, &ctx.#idx, rate, rng),
+                },
+                (None, _) => quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::Crossover>::crossover(&self.#idx, &other.#idx, ctx, rate, rng),
+                },
             }
+        })
+        .collect();
 
-            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
+    let child = if is_tuple_struct {
+        quote! { Self(#inner) }
+    } else {
+        quote! { Self { #inner } }
+    };
 
-            if tuple_struct {
-                quote! {
-                    #def_ctx
+    quote! {
+        #ctx_def
 
-                    #[automatically_derived]
-                    impl genetic_rs_common::prelude::Crossover for #name {
-                        type Context = #context;
+        #[automatically_derived]
+        impl genetic_rs_common::prelude::Crossover for #name {
+            type Context = #ctx_type;
 
-                        fn crossover(&self, other: &Self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
-                            Self(#inner)
-                        }
-                    }
-                }.into()
-            } else {
-                quote! {
-                    #def_ctx
-
-                    #[automatically_derived]
-                    impl genetic_rs_common::prelude::Crossover for #name {
-                        type Context = #context;
-
-                        fn crossover(&self, other: &Self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
-                            Self {
-                                #inner
-                            }
-                        }
-                    }
-                }.into()
+            fn crossover(&self, other: &Self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
+                #child
             }
-        }
-        Data::Enum(_e) => {
-            panic!("enums not yet supported");
-        }
-        Data::Union(_u) => {
-            panic!("unions not yet supported");
         }
     }
+    .into()
 }
 
 #[cfg(feature = "genrand")]
 #[proc_macro_derive(GenerateRandom)]
 pub fn genrand_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
+    let name = &ast.ident;
 
-    let name = ast.ident;
+    let Data::Struct(s) = &ast.data else {
+        panic!("enums and unions not yet supported");
+    };
 
-    match ast.data {
-        Data::Struct(s) => {
-            let mut inner = Vec::new();
-            let mut tuple_struct = false;
+    let is_tuple_struct = matches!(s.fields, Fields::Unnamed(_));
 
-            for field in s.fields {
-                let ty = field.ty;
-                let span = ty.span();
-
-                if let Some(field_name) = field.ident {
-                    inner.push(quote_spanned! {span=>
-                        #field_name: <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
-                    });
-                } else {
-                    tuple_struct = true;
-                    inner.push(quote_spanned! {span=>
-                        <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
-                    });
+    let inner: TokenStream2 = s
+        .fields
+        .iter()
+        .map(|field| {
+            let ty = &field.ty;
+            let span = ty.span();
+            if let Some(field_name) = &field.ident {
+                quote_spanned! {span=>
+                    #field_name: <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
                 }
-            }
-
-            let inner: proc_macro2::TokenStream = inner.into_iter().collect();
-            if tuple_struct {
-                quote! {
-                    #[automatically_derived]
-                    impl genetic_rs_common::prelude::GenerateRandom for #name {
-                        fn gen_random(rng: &mut impl rand::Rng) -> Self {
-                            Self(#inner)
-                        }
-                    }
-                }
-                .into()
             } else {
-                quote! {
-                    #[automatically_derived]
-                    impl genetic_rs_common::prelude::GenerateRandom for #name {
-                        fn gen_random(rng: &mut impl rand::Rng) -> Self {
-                            Self {
-                                #inner
-                            }
-                        }
-                    }
+                quote_spanned! {span=>
+                    <#ty as genetic_rs_common::prelude::GenerateRandom>::gen_random(rng),
                 }
-                .into()
             }
-        }
-        Data::Enum(_e) => {
-            panic!("enums not yet supported");
-        }
-        Data::Union(_u) => {
-            panic!("unions not yet supported");
+        })
+        .collect();
+
+    let body = if is_tuple_struct {
+        quote! { Self(#inner) }
+    } else {
+        quote! { Self { #inner } }
+    };
+
+    quote! {
+        #[automatically_derived]
+        impl genetic_rs_common::prelude::GenerateRandom for #name {
+            fn gen_random(rng: &mut impl rand::Rng) -> Self {
+                #body
+            }
         }
     }
+    .into()
 }
