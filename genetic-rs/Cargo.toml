@@ -42,3 +42,7 @@ required-features = ["speciation"]
 [[example]]
 name = "derive"
 required-features = ["derive"]
+
+[[test]]
+name = "derive_macros"
+required-features = ["derive", "genrand", "crossover"]
