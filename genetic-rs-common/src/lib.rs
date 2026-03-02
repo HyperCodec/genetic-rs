@@ -18,7 +18,7 @@ use rayon::prelude::*;
 /// Tests and eliminates the unfit from the simulation.
 pub trait Eliminator<G> {
     /// Tests and eliminates the unfit from the simulation.
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G>;
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G>;
 }
 
 /// Refills the population of the simulation based on survivors.

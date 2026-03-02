@@ -7,7 +7,7 @@ use genetic_rs::prelude::*;
 struct CountingObserver<'a>(&'a Cell<usize>);
 
 impl<'a, G> FitnessObserver<G> for CountingObserver<'a> {
-    fn observe(&self, _fitnesses: &[(G, f32)]) {
+    fn observe(&mut self, _fitnesses: &[(G, f32)]) {
         self.0.set(self.0.get() + 1);
     }
 }
@@ -17,7 +17,7 @@ fn layered_observer_calls_both() {
     let count_a = Cell::new(0usize);
     let count_b = Cell::new(0usize);
 
-    let layered = CountingObserver(&count_a).layer(CountingObserver(&count_b));
+    let mut layered = CountingObserver(&count_a).layer(CountingObserver(&count_b));
 
     let fitnesses: Vec<((), f32)> = vec![((), 1.0)];
     layered.observe(&fitnesses);
@@ -32,7 +32,7 @@ fn layered_observer_triple_layer() {
     let count_b = Cell::new(0usize);
     let count_c = Cell::new(0usize);
 
-    let layered = CountingObserver(&count_a)
+    let mut layered = CountingObserver(&count_a)
         .layer(CountingObserver(&count_b))
         .layer(CountingObserver(&count_c));
 
