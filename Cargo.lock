@@ -119,7 +119,7 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
 name = "genetic-rs"
-version = "1.2.1"
+version = "1.3.0"
 dependencies = [
  "genetic-rs-common",
  "genetic-rs-macros",
@@ -128,7 +128,7 @@ dependencies = [
 
 [[package]]
 name = "genetic-rs-common"
-version = "1.2.1"
+version = "1.3.0"
 dependencies = [
  "itertools",
  "rand",
@@ -137,7 +137,7 @@ dependencies = [
 
 [[package]]
 name = "genetic-rs-macros"
-version = "1.2.1"
+version = "1.3.0"
 dependencies = [
  "darling",
  "genetic-rs-common",
