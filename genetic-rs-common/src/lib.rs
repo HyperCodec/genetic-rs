@@ -24,7 +24,7 @@ pub trait Eliminator<G> {
 /// Refills the population of the simulation based on survivors.
 pub trait Repopulator<G> {
     /// Replaces the genomes in the simulation.
-    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
+    fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize);
 }
 
 #[doc(hidden)]
