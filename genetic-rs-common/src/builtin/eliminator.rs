@@ -213,8 +213,8 @@ where
     fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
-        fitnesses.truncate(median_index as usize + 1);
         self.observer.observe(&fitnesses);
+        fitnesses.truncate(median_index as usize + 1);
         fitnesses.into_iter().map(|(g, _)| g).collect()
     }
 
@@ -222,8 +222,8 @@ where
     fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
-        fitnesses.truncate(median_index as usize + 1);
         self.observer.observe(&fitnesses);
+        fitnesses.truncate(median_index as usize + 1);
         fitnesses.into_par_iter().map(|(g, _)| g).collect()
     }
 }
