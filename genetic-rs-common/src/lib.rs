@@ -1,11 +1,10 @@
 #![warn(missing_docs)]
 #![allow(clippy::needless_doctest_main)]
-#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! The crate containing the core traits and structs of genetic-rs.
 
 /// Built-in nextgen functions and traits to go with them.
-#[cfg_attr(docsrs, doc(cfg(feature = "builtin")))]
 #[cfg(feature = "builtin")]
 pub mod builtin;
 
@@ -112,7 +111,6 @@ where
 
 /// Helper trait used in the generation of random starting populations
 #[cfg(feature = "genrand")]
-#[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandom {
     /// Create a completely random instance of the genome
     fn gen_random(rng: &mut impl rand::Rng) -> Self;
@@ -120,7 +118,6 @@ pub trait GenerateRandom {
 
 /// Blanket trait used on collections that contain objects implementing [`GenerateRandom`]
 #[cfg(feature = "genrand")]
-#[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandomCollection<T>
 where
     T: GenerateRandom,
