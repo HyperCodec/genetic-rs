@@ -91,7 +91,6 @@ mod crossover {
     use super::*;
 
     /// Used in crossover-reproducing [`Repopulator`]s
-    #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
     pub trait Crossover: Clone {
         /// Simulation-wide context required for this crossover implementation.
         type Context;
@@ -107,7 +106,6 @@ mod crossover {
     }
 
     /// Repopulator that uses crossover reproduction to create new genomes.
-    #[cfg_attr(docsrs, doc(cfg(feature = "crossover")))]
     pub struct CrossoverRepopulator<G: Crossover> {
         /// The mutation rate to use when mutating genomes. 0.0 - 1.0
         pub mutation_rate: f32,
@@ -166,7 +164,6 @@ mod speciation {
     use super::*;
 
     /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
-    #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
     pub trait Speciated {
         /// The type used to distinguish
         /// one genome's species from another.
@@ -177,7 +174,6 @@ mod speciation {
     }
 
     /// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
-    #[cfg_attr(docsrs, doc(cfg(feature = "speciation")))]
     pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated> {
         /// The inner crossover repopulator. This holds the settings for crossover operations,
         /// but may also be called if [`allow_emergency_repr`][Self::allow_emergency_repr] is `true`.

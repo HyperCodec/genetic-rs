@@ -1,5 +1,5 @@
 #![allow(clippy::needless_doctest_main)]
-#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![cfg_attr(publish, doc = include_str!(env!("CARGO_PKG_README")))]
 #![cfg_attr(not(publish), doc = include_str!(concat!("../", env!("CARGO_PKG_README"))))]
 
@@ -7,14 +7,12 @@ pub mod prelude {
     pub use genetic_rs_common::{self, prelude::*};
 
     #[cfg(feature = "derive")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
     pub use genetic_rs_macros::*;
 }
 
 pub use genetic_rs_common::*;
 
 #[cfg(feature = "derive")]
-#[cfg_attr(docsrs, doc(cfg(feature = "derive")))]
 pub use genetic_rs_macros::*;
 
 pub extern crate genetic_rs_common;

@@ -285,7 +285,6 @@ mod knockout {
     use super::*;
 
     /// A distinct type to help clarify the result of a knockout function.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum KnockoutWinner {
         /// The first genome parameter won.
@@ -325,7 +324,6 @@ mod knockout {
     }
 
     /// A function that pits two genomes against each other and determines a winner.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     pub trait KnockoutFn<G> {
         /// Tests the genomes to figure out who wins.
         fn knockout(&self, a: &G, b: &G) -> KnockoutWinner;
@@ -383,7 +381,6 @@ mod knockout {
     impl<G, T: KnockoutFn<G> + Send + Sync> FeatureBoundedKnockoutFn<G> for T {}
 
     /// The action a knockout eliminator should take if the number of genomes is odd.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     pub enum ActionIfOdd {
         /// Always expect an even number, crash if odd.
         Panic,
@@ -415,7 +412,6 @@ mod knockout {
     }
 
     /// Eliminator that pits genomes against each other and eliminates the weaker ones.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     pub struct KnockoutEliminator<G: FeatureBoundedGenome, K: KnockoutFn<G>> {
         /// The function that determines the winner of a pair of genomes.
         pub knockout_fn: K,
