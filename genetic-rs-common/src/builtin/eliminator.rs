@@ -38,10 +38,35 @@ impl<G: FeatureBoundedGenome, T: FitnessFn<G> + Send + Sync> FeatureBoundedFitne
 pub trait FitnessObserver<G> {
     /// Observes the fitness scores of a generation of genomes.
     fn observe(&self, fitnesses: &[(G, f32)]);
+
+    /// Layers this observer with another, calling both in sequence.
+    fn layer<O: FitnessObserver<G>>(self, other: O) -> LayeredObserver<G, Self, O>
+    where
+        Self: Sized,
+    {
+        LayeredObserver(self, other, std::marker::PhantomData)
+    }
 }
 
 impl<G> FitnessObserver<G> for () {
     fn observe(&self, _fitnesses: &[(G, f32)]) {}
+}
+
+/// An observer that calls two observers in sequence.
+/// Created by [`FitnessObserver::layer`].
+pub struct LayeredObserver<G, A: FitnessObserver<G>, B: FitnessObserver<G>>(
+    pub A,
+    pub B,
+    std::marker::PhantomData<G>,
+);
+
+impl<G, A: FitnessObserver<G>, B: FitnessObserver<G>> FitnessObserver<G>
+    for LayeredObserver<G, A, B>
+{
+    fn observe(&self, fitnesses: &[(G, f32)]) {
+        self.0.observe(fitnesses);
+        self.1.observe(fitnesses);
+    }
 }
 
 #[cfg(not(feature = "rayon"))]
