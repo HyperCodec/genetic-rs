@@ -60,8 +60,10 @@ pub struct LayeredObserver<G, A: FitnessObserver<G>, B: FitnessObserver<G>>(
     std::marker::PhantomData<G>,
 );
 
-impl<G, A: FitnessObserver<G>, B: FitnessObserver<G>> FitnessObserver<G>
-    for LayeredObserver<G, A, B>
+impl<G, A, B> FitnessObserver<G> for LayeredObserver<G, A, B>
+where
+    A: FitnessObserver<G>,
+    B: FitnessObserver<G>,
 {
     fn observe(&self, fitnesses: &[(G, f32)]) {
         self.0.observe(fitnesses);
