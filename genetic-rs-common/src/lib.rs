@@ -5,7 +5,6 @@
 //! The crate containing the core traits and structs of genetic-rs.
 
 /// Built-in nextgen functions and traits to go with them.
-#[cfg_attr(docsrs, doc(cfg(feature = "builtin")))]
 #[cfg(feature = "builtin")]
 pub mod builtin;
 
@@ -19,13 +18,13 @@ use rayon::prelude::*;
 /// Tests and eliminates the unfit from the simulation.
 pub trait Eliminator<G> {
     /// Tests and eliminates the unfit from the simulation.
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G>;
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G>;
 }
 
 /// Refills the population of the simulation based on survivors.
 pub trait Repopulator<G> {
     /// Replaces the genomes in the simulation.
-    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
+    fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize);
 }
 
 #[doc(hidden)]
@@ -112,7 +111,6 @@ where
 
 /// Helper trait used in the generation of random starting populations
 #[cfg(feature = "genrand")]
-#[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandom {
     /// Create a completely random instance of the genome
     fn gen_random(rng: &mut impl rand::Rng) -> Self;
@@ -120,7 +118,6 @@ pub trait GenerateRandom {
 
 /// Blanket trait used on collections that contain objects implementing [`GenerateRandom`]
 #[cfg(feature = "genrand")]
-#[cfg_attr(docsrs, doc(cfg(feature = "genrand")))]
 pub trait GenerateRandomCollection<T>
 where
     T: GenerateRandom,

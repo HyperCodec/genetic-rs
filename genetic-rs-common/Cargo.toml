@@ -23,8 +23,11 @@ rayon = ["dep:rayon"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [package.metadata.docs.rs]
-features = ["crossover", "speciation"]
+all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ["cfg(docsrs)"] }
 
 [dependencies]
 itertools = { version = "0.14.0", optional = true }

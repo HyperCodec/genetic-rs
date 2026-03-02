@@ -37,11 +37,38 @@ impl<G: FeatureBoundedGenome, T: FitnessFn<G> + Send + Sync> FeatureBoundedFitne
 /// A trait for observing fitness scores. This can be used to implement things like logging or statistics collection.
 pub trait FitnessObserver<G> {
     /// Observes the fitness scores of a generation of genomes.
-    fn observe(&self, fitnesses: &[(G, f32)]);
+    fn observe(&mut self, fitnesses: &[(G, f32)]);
+
+    /// Layers this observer with another, calling both in sequence.
+    fn layer<O: FitnessObserver<G>>(self, other: O) -> LayeredObserver<G, Self, O>
+    where
+        Self: Sized,
+    {
+        LayeredObserver(self, other, std::marker::PhantomData)
+    }
 }
 
 impl<G> FitnessObserver<G> for () {
-    fn observe(&self, _fitnesses: &[(G, f32)]) {}
+    fn observe(&mut self, _fitnesses: &[(G, f32)]) {}
+}
+
+/// An observer that calls two observers in sequence.
+/// Created by [`FitnessObserver::layer`].
+pub struct LayeredObserver<G, A: FitnessObserver<G>, B: FitnessObserver<G>>(
+    pub A,
+    pub B,
+    std::marker::PhantomData<G>,
+);
+
+impl<G, A, B> FitnessObserver<G> for LayeredObserver<G, A, B>
+where
+    A: FitnessObserver<G>,
+    B: FitnessObserver<G>,
+{
+    fn observe(&mut self, fitnesses: &[(G, f32)]) {
+        self.0.observe(fitnesses);
+        self.1.observe(fitnesses);
+    }
 }
 
 #[cfg(not(feature = "rayon"))]
@@ -183,7 +210,7 @@ where
     O: FeatureBoundedFitnessObserver<G>,
 {
     #[cfg(not(feature = "rayon"))]
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
         self.observer.observe(&fitnesses);
@@ -192,7 +219,7 @@ where
     }
 
     #[cfg(feature = "rayon")]
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
         self.observer.observe(&fitnesses);
@@ -285,7 +312,6 @@ mod knockout {
     use super::*;
 
     /// A distinct type to help clarify the result of a knockout function.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum KnockoutWinner {
         /// The first genome parameter won.
@@ -325,7 +351,6 @@ mod knockout {
     }
 
     /// A function that pits two genomes against each other and determines a winner.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     pub trait KnockoutFn<G> {
         /// Tests the genomes to figure out who wins.
         fn knockout(&self, a: &G, b: &G) -> KnockoutWinner;
@@ -383,7 +408,6 @@ mod knockout {
     impl<G, T: KnockoutFn<G> + Send + Sync> FeatureBoundedKnockoutFn<G> for T {}
 
     /// The action a knockout eliminator should take if the number of genomes is odd.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     pub enum ActionIfOdd {
         /// Always expect an even number, crash if odd.
         Panic,
@@ -415,7 +439,6 @@ mod knockout {
     }
 
     /// Eliminator that pits genomes against each other and eliminates the weaker ones.
-    #[cfg_attr(docsrs, doc(cfg(feature = "knockout")))]
     pub struct KnockoutEliminator<G: FeatureBoundedGenome, K: KnockoutFn<G>> {
         /// The function that determines the winner of a pair of genomes.
         pub knockout_fn: K,
@@ -446,7 +469,7 @@ mod knockout {
         G: FeatureBoundedGenome,
         K: FeatureBoundedKnockoutFn<G>,
     {
-        fn eliminate(&self, mut genomes: Vec<G>) -> Vec<G> {
+        fn eliminate(&mut self, mut genomes: Vec<G>) -> Vec<G> {
             let len = genomes.len();
 
             if len < 2 {
