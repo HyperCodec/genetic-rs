@@ -37,7 +37,7 @@ impl<G: FeatureBoundedGenome, T: FitnessFn<G> + Send + Sync> FeatureBoundedFitne
 /// A trait for observing fitness scores. This can be used to implement things like logging or statistics collection.
 pub trait FitnessObserver<G> {
     /// Observes the fitness scores of a generation of genomes.
-    fn observe(&self, fitnesses: &[(G, f32)]);
+    fn observe(&mut self, fitnesses: &[(G, f32)]);
 
     /// Layers this observer with another, calling both in sequence.
     fn layer<O: FitnessObserver<G>>(self, other: O) -> LayeredObserver<G, Self, O>
@@ -49,7 +49,7 @@ pub trait FitnessObserver<G> {
 }
 
 impl<G> FitnessObserver<G> for () {
-    fn observe(&self, _fitnesses: &[(G, f32)]) {}
+    fn observe(&mut self, _fitnesses: &[(G, f32)]) {}
 }
 
 /// An observer that calls two observers in sequence.
@@ -65,7 +65,7 @@ where
     A: FitnessObserver<G>,
     B: FitnessObserver<G>,
 {
-    fn observe(&self, fitnesses: &[(G, f32)]) {
+    fn observe(&mut self, fitnesses: &[(G, f32)]) {
         self.0.observe(fitnesses);
         self.1.observe(fitnesses);
     }
@@ -210,7 +210,7 @@ where
     O: FeatureBoundedFitnessObserver<G>,
 {
     #[cfg(not(feature = "rayon"))]
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
         fitnesses.truncate(median_index as usize + 1);
@@ -219,7 +219,7 @@ where
     }
 
     #[cfg(feature = "rayon")]
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G> {
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
         let mut fitnesses = self.calculate_and_sort(genomes);
         let median_index = (fitnesses.len() as f32) * self.threshold;
         fitnesses.truncate(median_index as usize + 1);
@@ -469,7 +469,7 @@ mod knockout {
         G: FeatureBoundedGenome,
         K: FeatureBoundedKnockoutFn<G>,
     {
-        fn eliminate(&self, mut genomes: Vec<G>) -> Vec<G> {
+        fn eliminate(&mut self, mut genomes: Vec<G>) -> Vec<G> {
             let len = genomes.len();
 
             if len < 2 {

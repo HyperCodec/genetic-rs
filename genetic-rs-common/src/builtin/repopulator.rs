@@ -70,7 +70,7 @@ impl<G> Repopulator<G> for MitosisRepopulator<G>
 where
     G: Mitosis,
 {
-    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
+    fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize) {
         let mut rng = rand::rng();
         let champions = genomes.clone();
         let mut champs_cycle = champions.iter().cycle();
@@ -130,7 +130,7 @@ mod crossover {
     where
         G: Crossover,
     {
-        fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
+        fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize) {
             let mut rng = rand::rng();
             let champions = genomes.clone();
             let mut champs_cycle = champions.iter().enumerate().cycle();
@@ -205,7 +205,7 @@ mod speciation {
     {
         // i'm still not really satisfied with this implementation,
         // but it's better than the old one.
-        fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize) {
+        fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize) {
             let initial_size = genomes.len();
             let mut rng = rand::rng();
             let mut species: HashMap<<G as Speciated>::Species, Vec<&G>> = HashMap::new();

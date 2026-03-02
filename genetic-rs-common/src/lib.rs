@@ -18,13 +18,13 @@ use rayon::prelude::*;
 /// Tests and eliminates the unfit from the simulation.
 pub trait Eliminator<G> {
     /// Tests and eliminates the unfit from the simulation.
-    fn eliminate(&self, genomes: Vec<G>) -> Vec<G>;
+    fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G>;
 }
 
 /// Refills the population of the simulation based on survivors.
 pub trait Repopulator<G> {
     /// Replaces the genomes in the simulation.
-    fn repopulate(&self, genomes: &mut Vec<G>, target_size: usize);
+    fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize);
 }
 
 #[doc(hidden)]
