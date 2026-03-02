@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 #![allow(clippy::needless_doctest_main)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 //! The crate containing the core traits and structs of genetic-rs.
 

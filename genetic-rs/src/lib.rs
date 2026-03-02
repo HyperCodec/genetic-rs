@@ -1,5 +1,5 @@
 #![allow(clippy::needless_doctest_main)]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(publish, doc = include_str!(env!("CARGO_PKG_README")))]
 #![cfg_attr(not(publish), doc = include_str!(concat!("../", env!("CARGO_PKG_README"))))]
 
