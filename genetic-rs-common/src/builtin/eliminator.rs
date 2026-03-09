@@ -52,6 +52,16 @@ impl<G> FitnessObserver<G> for () {
     fn observe(&mut self, _fitnesses: &[(G, f32)]) {}
 }
 
+impl<F, G> FitnessObserver<G> for F
+where
+    F: Fn(&[(G, f32)]),
+    G: FeatureBoundedGenome,
+{
+    fn observe(&mut self, fitnesses: &[(G, f32)]) {
+        (self)(fitnesses);
+    }
+}
+
 /// An observer that calls two observers in sequence.
 /// Created by [`FitnessObserver::layer`].
 pub struct LayeredObserver<G, A: FitnessObserver<G>, B: FitnessObserver<G>>(
@@ -596,10 +606,15 @@ mod speciation {
 
             for species in population.species {
                 let len = species.len() as f32;
+                debug_assert!(len != 0.0);
                 for index in species {
                     let genome = &genomes[index];
-                    let fitness = self.inner.fitness_fn.fitness(genome) / len;
-                    fitnesses[index] = fitness;
+                    let fitness = self.inner.fitness_fn.fitness(genome);
+                    if fitness < 0.0 {
+                        fitnesses[index] = fitness * len;
+                    } else {
+                        fitnesses[index] = fitness / len;
+                    }
                 }
             }
 
@@ -649,6 +664,7 @@ mod speciation {
         #[cfg(not(feature = "rayon"))]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
             let mut fitnesses = self.calculate_and_sort(genomes);
+            self.inner.observer.observe(&fitnesses);
             let median_index = (fitnesses.len() as f32) * self.inner.threshold;
             fitnesses.truncate(median_index as usize + 1);
             fitnesses.into_iter().map(|(g, _)| g).collect()
@@ -657,6 +673,7 @@ mod speciation {
         #[cfg(feature = "rayon")]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
             let mut fitnesses = self.calculate_and_sort(genomes);
+            self.inner.observer.observe(&fitnesses);
             let median_index = (fitnesses.len() as f32) * self.inner.threshold;
             fitnesses.truncate(median_index as usize + 1);
             fitnesses.into_par_iter().map(|(g, _)| g).collect()
