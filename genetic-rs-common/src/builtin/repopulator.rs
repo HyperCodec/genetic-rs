@@ -157,43 +157,59 @@ pub use crossover::*;
 
 #[cfg(feature = "speciation")]
 mod speciation {
-    use std::collections::HashMap;
-
     use rand::RngExt;
+
+    use crate::speciation::{Speciated, SpeciatedPopulation};
 
     use super::*;
 
-    /// Used in speciated crossover nextgens. Allows for genomes to avoid crossover with ones that are too different.
-    pub trait Speciated {
-        /// The type used to distinguish
-        /// one genome's species from another.
-        type Species: Eq + std::hash::Hash; // I really don't like that we need `Eq` when `PartialEq` better fits the definiton.
+    /// The action to take when a genome is found to be in a species by itself.
+    /// This can be used to prevent species from going extinct due to bad luck in crossover.
+    pub enum ActionIfIsolated {
+        /// Do nothing, allowing the species to go extinct if the genome is not fit enough.
+        DoNothing,
 
-        /// Get/calculate this genome's species.
-        fn species(&self) -> Self::Species;
+        /// Perform crossover between the genome and itself to create a new member of the species. This can help prevent extinction while still introducing some variation, but may be more computationally expensive than cloning.
+        SelfCrossover,
     }
 
     /// Repopulator that uses crossover reproduction to create new genomes, but only between genomes of the same species.
     pub struct SpeciatedCrossoverRepopulator<G: Crossover + Speciated> {
-        /// The inner crossover repopulator. This holds the settings for crossover operations,
-        /// but may also be called if [`allow_emergency_repr`][Self::allow_emergency_repr] is `true`.
-        pub crossover: CrossoverRepopulator<G>,
+        /// The inner crossover repopulator. This holds the settings for crossover operations.
+        pub inner: CrossoverRepopulator<G>,
 
-        /// Whether to allow genomes to reproduce across species boundaries
-        /// (effectively vanilla crossover)
-        /// in emergency situations where no genomes have compatible partners.
-        /// If disabled, the simulation will panic in such a situation.
-        pub allow_emergency_repr: bool,
+        /// The threshold used to determine if a genome belongs in a species.
+        /// See [`SpeciatedPopulation::threshold`] for more info.
+        pub speciation_threshold: f32,
+
+        /// The action to take when a genome is found to be in a species by itself.
+        pub action_if_isolated: ActionIfIsolated,
+
+        /// Additional context for speciation.
+        pub ctx: <G as Speciated>::Context,
 
         _marker: std::marker::PhantomData<G>,
     }
 
     impl<G: Crossover + Speciated> SpeciatedCrossoverRepopulator<G> {
         /// Creates a new [`SpeciatedCrossoverRepopulator`].
-        pub fn new(mutation_rate: f32, allow_emergency_repr: bool, ctx: G::Context) -> Self {
+        pub fn new(mutation_rate: f32, threshold: f32, action_if_isolated: ActionIfIsolated, crossover_ctx: <G as Crossover>::Context, spec_ctx: <G as Speciated>::Context) -> Self {
             Self {
-                crossover: CrossoverRepopulator::new(mutation_rate, ctx),
-                allow_emergency_repr,
+                inner: CrossoverRepopulator::new(mutation_rate, crossover_ctx),
+                ctx: spec_ctx,
+                speciation_threshold: threshold,
+                action_if_isolated,
+                _marker: std::marker::PhantomData,
+            }
+        }
+
+        /// Creates a new [`SpeciatedCrossoverRepopulator`] from an existing [`CrossoverRepopulator`], using the same mutation settings.
+        pub fn from_crossover_repopulator(inner: CrossoverRepopulator<G>, threshold: f32, action_if_isolated: ActionIfIsolated, ctx: <G as Speciated>::Context) -> Self {
+            Self {
+                inner,
+                ctx,
+                speciation_threshold: threshold,
+                action_if_isolated,
                 _marker: std::marker::PhantomData,
             }
         }
@@ -203,60 +219,42 @@ mod speciation {
     where
         G: Crossover + Speciated,
     {
-        // i'm still not really satisfied with this implementation,
-        // but it's better than the old one.
         fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize) {
             let initial_size = genomes.len();
             let mut rng = rand::rng();
-            let mut species: HashMap<<G as Speciated>::Species, Vec<&G>> = HashMap::new();
+            let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
 
-            for genome in genomes.iter() {
-                let spec = genome.species();
-                species.entry(spec).or_insert_with(Vec::new).push(genome);
-            }
-
-            let mut species_iter = species.values();
-            let to_create = target_size - initial_size;
-            let mut new_genomes = Vec::with_capacity(to_create);
-
-            while new_genomes.len() < to_create {
-                if let Some(spec) = species_iter.next() {
-                    if spec.len() < 2 {
-                        continue;
-                    }
-
-                    for (i, &parent1) in spec.iter().enumerate() {
-                        let mut j = rng.random_range(1..spec.len());
-                        if j == i {
-                            j = 0;
-                        }
-                        let parent2 = spec[j];
-
-                        new_genomes.push(parent1.crossover(
-                            parent2,
-                            &self.crossover.ctx,
-                            self.crossover.mutation_rate,
-                            &mut rng,
-                        ));
-                    }
-                } else {
-                    // reached the end, reset the iterator
-
-                    if new_genomes.is_empty() {
-                        // no genomes have compatible partners
-                        if self.allow_emergency_repr {
-                            self.crossover.repopulate(genomes, target_size);
-                            return;
-                        } else {
-                            panic!("no genomes with common species");
+            let amount_to_make = target_size - initial_size;
+            let mut species_cycle = population.round_robin_enumerate();
+            
+            let mut i = 0;
+            while i < amount_to_make {
+                let (species_i, genome_i) = species_cycle.next().unwrap();
+                let species = &population.species[species_i];
+                let parent1 = &genomes[genome_i];
+                if species.len() < 2 {
+                    match self.action_if_isolated {
+                        ActionIfIsolated::DoNothing => continue,
+                        ActionIfIsolated::SelfCrossover => {
+                            let child = parent1.crossover(parent1, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
+                            genomes.push(child);
+                            i += 1;
+                            continue;
                         }
                     }
-
-                    species_iter = species.values();
                 }
-            }
 
-            genomes.extend(new_genomes);
+                let mut j = rng.random_range(1..species.len());
+                if genome_i == species[j] {
+                    j = 0;
+                }
+                let parent2 = &genomes[species[j]];
+
+                let child = parent1.crossover(parent2, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
+                genomes.push(child);
+
+                i += 1;
+            }
         }
     }
 }
