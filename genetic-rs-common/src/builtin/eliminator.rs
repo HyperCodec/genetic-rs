@@ -538,7 +538,7 @@ pub use knockout::*;
 mod speciation {
     use crate::{prelude::*, speciation::SpeciatedPopulation};
 
-    //// An eliminator that attempts to preserve new experimental structures by dividing a genome's
+    /// An eliminator that attempts to preserve new experimental structures by dividing a genome's
     /// fitness by the number of genomes in its species.
     pub struct SpeciatedFitnessEliminator<
         F: FeatureBoundedFitnessFn<G>,
@@ -620,7 +620,7 @@ mod speciation {
             }
 
             let mut fitnesses: Vec<(G, f32)> =
-                genomes.into_iter().zip(fitnesses.into_iter()).collect();
+                genomes.into_iter().zip(fitnesses).collect();
             fitnesses.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
             fitnesses
         }

@@ -255,7 +255,7 @@ mod speciation {
             let initial_size = genomes.len();
             let mut rng = rand::rng();
             let population =
-                SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
+                SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
 
             let amount_to_make = target_size - initial_size;
             let mut species_cycle = population.round_robin_enumerate();
