@@ -527,10 +527,14 @@ pub use knockout::*;
 #[cfg(feature = "speciation")]
 mod speciation {
     use crate::{prelude::*, speciation::SpeciatedPopulation};
-    
+
     //// An eliminator that attempts to preserve new experimental structures by dividing a genome's
     /// fitness by the number of genomes in its species.
-    pub struct SpeciatedFitnessEliminator<F: FeatureBoundedFitnessFn<G>, G: Speciated + FeatureBoundedGenome, O: FeatureBoundedFitnessObserver<G> = ()> {
+    pub struct SpeciatedFitnessEliminator<
+        F: FeatureBoundedFitnessFn<G>,
+        G: Speciated + FeatureBoundedGenome,
+        O: FeatureBoundedFitnessObserver<G> = (),
+    > {
         /// The divergence threshold used to determine whether a genome belongs in a species.
         /// See [`SpeciatedPopulation::threshold`] for more info.
         pub speciation_threshold: f32,
@@ -540,7 +544,7 @@ mod speciation {
 
         /// The percentage of genomes to keep. Must be between 0.0 and 1.0.
         pub keep_threshold: f32,
-        
+
         /// The fitness observer used to observe fitness scores.
         pub observer: Option<O>,
 
@@ -555,7 +559,12 @@ mod speciation {
     {
         /// Creates a new [`SpeciatedFitnessEliminator`] with a given fitness function and thresholds.
         /// Panics if the thresholds are not between 0.0 and 1.0.
-        pub fn new(fitness_fn: F, speciation_threshold: f32, keep_threshold: f32, observer: Option<O>) -> Self {
+        pub fn new(
+            fitness_fn: F,
+            speciation_threshold: f32,
+            keep_threshold: f32,
+            observer: Option<O>,
+        ) -> Self {
             if !(0.0..=1.0).contains(&speciation_threshold) {
                 panic!("Speciation threshold must be between 0.0 and 1.0");
             }
@@ -573,8 +582,16 @@ mod speciation {
 
         /// Creates a new [`SpeciatedFitnessEliminator`] from a regular [`FitnessEliminator`] and a speciation threshold.
         /// Useful since you can use the builder for [`FitnessEliminator`] to construct the fitness function and observer, then convert it into a [`SpeciatedFitnessEliminator`] with this method.
-        pub fn from_fitness_eliminator(fitness_eliminator: FitnessEliminator<F, G, O>, speciation_threshold: f32) -> Self {
-            Self::new(fitness_eliminator.fitness_fn, speciation_threshold, fitness_eliminator.threshold, Some(fitness_eliminator.observer))
+        pub fn from_fitness_eliminator(
+            fitness_eliminator: FitnessEliminator<F, G, O>,
+            speciation_threshold: f32,
+        ) -> Self {
+            Self::new(
+                fitness_eliminator.fitness_fn,
+                speciation_threshold,
+                fitness_eliminator.threshold,
+                Some(fitness_eliminator.observer),
+            )
         }
 
         /// Calculates the fitness of each genome, dividing by the number of genomes in its species, and sorts them by fitness.
@@ -593,7 +610,8 @@ mod speciation {
                 }
             }
 
-            let mut fitnesses: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses.into_iter()).collect();
+            let mut fitnesses: Vec<(G, f32)> =
+                genomes.into_iter().zip(fitnesses.into_iter()).collect();
             fitnesses.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
             fitnesses
         }
@@ -603,10 +621,10 @@ mod speciation {
         #[cfg(feature = "rayon")]
         pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
             let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold);
-            
+
             // Create fitnesses array with default values
             let mut fitnesses = vec![0.0; genomes.len()];
-            
+
             // Process species sequentially, but within each species compute fitnesses in parallel
             for species in population.species {
                 let len = species.len() as f32;
@@ -618,14 +636,15 @@ mod speciation {
                         (index, fitness)
                     })
                     .collect();
-                
+
                 for (index, fitness) in updates {
                     fitnesses[index] = fitness;
                 }
             }
-            
+
             // Pair genomes with fitnesses and sort
-            let mut result: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses.into_iter()).collect();
+            let mut result: Vec<(G, f32)> =
+                genomes.into_iter().zip(fitnesses.into_iter()).collect();
             result.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
             result
         }

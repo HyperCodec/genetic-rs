@@ -61,7 +61,11 @@ impl SpeciatedPopulation {
     }
 
     /// Get a mutable reference to the species that a genome belongs to, if any.
-    pub fn get_species_mut<G: Speciated>(&mut self, index: usize, genomes: &[G]) -> Option<&mut Vec<usize>> {
+    pub fn get_species_mut<G: Speciated>(
+        &mut self,
+        index: usize,
+        genomes: &[G],
+    ) -> Option<&mut Vec<usize>> {
         let genome = &genomes[index];
         for species in &mut self.species {
             if genome.divergence(&genomes[species[0]]) < self.threshold {
