@@ -66,7 +66,9 @@ impl SpeciatedPopulation {
         ctx: &G::Context,
     ) -> Option<&Vec<usize>> {
         let genome = &genomes[index];
-        self.species.iter().find(|species| genome.divergence(&genomes[species[0]], ctx) < self.threshold)
+        self.species
+            .iter()
+            .find(|species| genome.divergence(&genomes[species[0]], ctx) < self.threshold)
     }
 
     /// Get a mutable reference to the species that a genome belongs to, if any.
@@ -77,7 +79,9 @@ impl SpeciatedPopulation {
         ctx: &G::Context,
     ) -> Option<&mut Vec<usize>> {
         let genome = &genomes[index];
-        self.species.iter_mut().find(|species| genome.divergence(&genomes[species[0]], ctx) < self.threshold)
+        self.species
+            .iter_mut()
+            .find(|species| genome.divergence(&genomes[species[0]], ctx) < self.threshold)
     }
 
     /// Round robin cyclic iterator over the genomes in this population.

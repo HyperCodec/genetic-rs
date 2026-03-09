@@ -619,8 +619,7 @@ mod speciation {
                 }
             }
 
-            let mut fitnesses: Vec<(G, f32)> =
-                genomes.into_iter().zip(fitnesses).collect();
+            let mut fitnesses: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses).collect();
             fitnesses.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
             fitnesses
         }
@@ -648,8 +647,7 @@ mod speciation {
                 }
             }
 
-            let mut result: Vec<(G, f32)> =
-                genomes.into_iter().zip(fitnesses).collect();
+            let mut result: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses).collect();
             result.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
             result
         }
