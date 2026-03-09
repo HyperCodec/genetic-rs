@@ -30,7 +30,12 @@ pub struct SpeciatedPopulation {
 impl SpeciatedPopulation {
     /// Inserts a genome into the speciated population.
     /// Returns whether a new species was created by this insertion.
-    pub fn insert_genome<G: Speciated>(&mut self, index: usize, genomes: &[G], ctx: &G::Context) -> bool {
+    pub fn insert_genome<G: Speciated>(
+        &mut self,
+        index: usize,
+        genomes: &[G],
+        ctx: &G::Context,
+    ) -> bool {
         if let Some(species) = self.get_species_mut(index, genomes, ctx) {
             species.push(index);
             return false;
@@ -54,7 +59,12 @@ impl SpeciatedPopulation {
     }
 
     /// Gets the species that a genome belongs to, if any.
-    pub fn get_species<G: Speciated>(&self, index: usize, genomes: &[G], ctx: &G::Context) -> Option<&Vec<usize>> {
+    pub fn get_species<G: Speciated>(
+        &self,
+        index: usize,
+        genomes: &[G],
+        ctx: &G::Context,
+    ) -> Option<&Vec<usize>> {
         let genome = &genomes[index];
         for species in &self.species {
             if genome.divergence(&genomes[species[0]], ctx) < self.threshold {
@@ -86,7 +96,7 @@ impl SpeciatedPopulation {
         let species = &self.species;
         let mut idx_in_species = vec![0; self.species.len()];
         let mut species_i = 0usize;
-        
+
         std::iter::from_fn(move || {
             if species.is_empty() {
                 return None;
@@ -111,7 +121,7 @@ impl SpeciatedPopulation {
         let species = &self.species;
         let mut idx_in_species = vec![0; self.species.len()];
         let mut species_i = 0usize;
-        
+
         std::iter::from_fn(move || {
             if species.is_empty() {
                 return None;

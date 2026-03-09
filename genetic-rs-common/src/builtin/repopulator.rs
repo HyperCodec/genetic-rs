@@ -214,7 +214,13 @@ mod speciation {
 
     impl<G: Crossover + Speciated> SpeciatedCrossoverRepopulator<G> {
         /// Creates a new [`SpeciatedCrossoverRepopulator`].
-        pub fn new(mutation_rate: f32, threshold: f32, action_if_isolated: ActionIfIsolated, crossover_ctx: <G as Crossover>::Context, spec_ctx: <G as Speciated>::Context) -> Self {
+        pub fn new(
+            mutation_rate: f32,
+            threshold: f32,
+            action_if_isolated: ActionIfIsolated,
+            crossover_ctx: <G as Crossover>::Context,
+            spec_ctx: <G as Speciated>::Context,
+        ) -> Self {
             Self {
                 inner: CrossoverRepopulator::new(mutation_rate, crossover_ctx),
                 ctx: spec_ctx,
@@ -225,7 +231,12 @@ mod speciation {
         }
 
         /// Creates a new [`SpeciatedCrossoverRepopulator`] from an existing [`CrossoverRepopulator`], using the same mutation settings.
-        pub fn from_crossover(inner: CrossoverRepopulator<G>, threshold: f32, action_if_isolated: ActionIfIsolated, ctx: <G as Speciated>::Context) -> Self {
+        pub fn from_crossover(
+            inner: CrossoverRepopulator<G>,
+            threshold: f32,
+            action_if_isolated: ActionIfIsolated,
+            ctx: <G as Speciated>::Context,
+        ) -> Self {
             Self {
                 inner,
                 ctx,
@@ -243,11 +254,12 @@ mod speciation {
         fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize) {
             let initial_size = genomes.len();
             let mut rng = rand::rng();
-            let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
+            let population =
+                SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
 
             let amount_to_make = target_size - initial_size;
             let mut species_cycle = population.round_robin_enumerate();
-            
+
             let mut i = 0;
             while i < amount_to_make {
                 let (species_i, genome_i) = species_cycle.next().unwrap();
@@ -257,11 +269,16 @@ mod speciation {
                     match self.action_if_isolated {
                         ActionIfIsolated::DoNothing => continue,
                         ActionIfIsolated::CrossoverSelf => {
-                            let child = parent1.crossover(parent1, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
+                            let child = parent1.crossover(
+                                parent1,
+                                &self.inner.ctx,
+                                self.inner.mutation_rate,
+                                &mut rng,
+                            );
                             genomes.push(child);
                             i += 1;
                             continue;
-                        },
+                        }
                         ActionIfIsolated::CrossoverSimilarSpecies => {
                             let mut best_species_i = 0;
                             let mut best_divergence = f32::MAX;
@@ -280,11 +297,16 @@ mod speciation {
                             let best_species = &population.species[best_species_i];
                             let j = rng.random_range(0..best_species.len());
                             let parent2 = &genomes[best_species[j]];
-                            let child = parent1.crossover(parent2, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
+                            let child = parent1.crossover(
+                                parent2,
+                                &self.inner.ctx,
+                                self.inner.mutation_rate,
+                                &mut rng,
+                            );
                             genomes.push(child);
                             i += 1;
                             continue;
-                        },
+                        }
                         ActionIfIsolated::CrossoverRandom => {
                             let mut j = rng.random_range(1..genomes.len());
                             if j == genome_i {
@@ -292,7 +314,12 @@ mod speciation {
                             }
 
                             let parent2 = &genomes[j];
-                            let child = parent1.crossover(parent2, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
+                            let child = parent1.crossover(
+                                parent2,
+                                &self.inner.ctx,
+                                self.inner.mutation_rate,
+                                &mut rng,
+                            );
                             genomes.push(child);
                             i += 1;
                             continue;
@@ -306,7 +333,8 @@ mod speciation {
                 }
                 let parent2 = &genomes[species[j]];
 
-                let child = parent1.crossover(parent2, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
+                let child =
+                    parent1.crossover(parent2, &self.inner.ctx, self.inner.mutation_rate, &mut rng);
                 genomes.push(child);
 
                 i += 1;
@@ -321,7 +349,12 @@ mod speciation {
         <G as Speciated>::Context: Default,
     {
         fn default() -> Self {
-            Self::from_crossover(CrossoverRepopulator::default(), 0.1, ActionIfIsolated::CrossoverSimilarSpecies, <G as Speciated>::Context::default())
+            Self::from_crossover(
+                CrossoverRepopulator::default(),
+                0.1,
+                ActionIfIsolated::CrossoverSimilarSpecies,
+                <G as Speciated>::Context::default(),
+            )
         }
     }
 }

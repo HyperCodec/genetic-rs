@@ -43,8 +43,12 @@ impl RandomlyMutable for MyGenome {
 impl Mitosis for MyGenome {
     type Context = ();
 
-    fn divide(&self, ctx: &<Self as Mitosis>::Context, rate: f32, rng: &mut impl rand::Rng)
-            -> Self {
+    fn divide(
+        &self,
+        ctx: &<Self as Mitosis>::Context,
+        rate: f32,
+        rng: &mut impl rand::Rng,
+    ) -> Self {
         let mut child = self.clone();
         child.mutate(ctx, rate, rng);
         child
@@ -54,7 +58,13 @@ impl Mitosis for MyGenome {
 impl Crossover for MyGenome {
     type Context = ();
 
-    fn crossover(&self, other: &Self, ctx: &Self::Context, rate: f32, rng: &mut impl rand::Rng) -> Self {
+    fn crossover(
+        &self,
+        other: &Self,
+        ctx: &Self::Context,
+        rate: f32,
+        rng: &mut impl rand::Rng,
+    ) -> Self {
         // even though they ideally shouldn't crossover if they aren't the same length
         // because of speciation, we can still allow it in emergency scenarios to prevent extinction
         // and encourage more diversity, at the cost of more broken or dysfunctional species
@@ -105,7 +115,7 @@ fn print_fitnesses(fitnesses: &[(MyGenome, f32)]) {
     // these values are divided by the number of genomes in the species.
     let hi = fitnesses[0].1;
     let med = fitnesses[fitnesses.len() / 2].1;
-    let lo = fitnesses[fitnesses.len()-1].1;
+    let lo = fitnesses[fitnesses.len() - 1].1;
 
     println!("hi: {hi} med: {med} lo: {lo}");
 }
@@ -122,8 +132,17 @@ fn main() {
 
     let mut sim = GeneticSim::new(
         Vec::gen_random(&mut rng, 100),
-        SpeciatedFitnessEliminator::from_fitness_eliminator(fitness_eliminator, SPECIATION_THRESHOLD, ()),
-        SpeciatedCrossoverRepopulator::from_crossover(crossover_rep, SPECIATION_THRESHOLD, ActionIfIsolated::CrossoverSimilarSpecies, ())
+        SpeciatedFitnessEliminator::from_fitness_eliminator(
+            fitness_eliminator,
+            SPECIATION_THRESHOLD,
+            (),
+        ),
+        SpeciatedCrossoverRepopulator::from_crossover(
+            crossover_rep,
+            SPECIATION_THRESHOLD,
+            ActionIfIsolated::CrossoverSimilarSpecies,
+            (),
+        ),
     );
 
     sim.perform_generations(100);

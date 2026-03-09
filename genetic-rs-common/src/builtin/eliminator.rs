@@ -601,7 +601,8 @@ mod speciation {
         /// Returns a vector of tuples containing the genome and its fitness score.
         #[cfg(not(feature = "rayon"))]
         pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
-            let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
+            let population =
+                SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
             let mut fitnesses = vec![0.0; genomes.len()];
 
             for species in population.species {
@@ -628,7 +629,8 @@ mod speciation {
         /// Returns a vector of tuples containing the genome and its fitness score.
         #[cfg(feature = "rayon")]
         pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
-            let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
+            let population =
+                SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
 
             let mut fitnesses = vec![0.0; genomes.len()];
 
