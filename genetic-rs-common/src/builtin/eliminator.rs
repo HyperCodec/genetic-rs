@@ -523,3 +523,137 @@ mod knockout {
 
 #[cfg(feature = "knockout")]
 pub use knockout::*;
+
+#[cfg(feature = "speciation")]
+mod speciation {
+    use crate::{prelude::*, speciation::SpeciatedPopulation};
+    
+    //// An eliminator that attempts to preserve new experimental structures by dividing a genome's
+    /// fitness by the number of genomes in its species.
+    pub struct SpeciatedFitnessEliminator<F: FeatureBoundedFitnessFn<G>, G: Speciated + FeatureBoundedGenome, O: FeatureBoundedFitnessObserver<G> = ()> {
+        /// The divergence threshold used to determine whether a genome belongs in a species.
+        /// See [`SpeciatedPopulation::threshold`] for more info.
+        pub speciation_threshold: f32,
+
+        /// The fitness function used to evaluate genomes.
+        pub fitness_fn: F,
+
+        /// The percentage of genomes to keep. Must be between 0.0 and 1.0.
+        pub keep_threshold: f32,
+        
+        /// The fitness observer used to observe fitness scores.
+        pub observer: Option<O>,
+
+        _marker: std::marker::PhantomData<G>,
+    }
+
+    impl<F, G, O> SpeciatedFitnessEliminator<F, G, O>
+    where
+        F: FeatureBoundedFitnessFn<G>,
+        G: Speciated + FeatureBoundedGenome,
+        O: FeatureBoundedFitnessObserver<G>,
+    {
+        /// Creates a new [`SpeciatedFitnessEliminator`] with a given fitness function and thresholds.
+        /// Panics if the thresholds are not between 0.0 and 1.0.
+        pub fn new(fitness_fn: F, speciation_threshold: f32, keep_threshold: f32, observer: Option<O>) -> Self {
+            if !(0.0..=1.0).contains(&speciation_threshold) {
+                panic!("Speciation threshold must be between 0.0 and 1.0");
+            }
+            if !(0.0..=1.0).contains(&keep_threshold) {
+                panic!("Keep threshold must be between 0.0 and 1.0");
+            }
+            Self {
+                fitness_fn,
+                speciation_threshold,
+                keep_threshold,
+                observer,
+                _marker: std::marker::PhantomData,
+            }
+        }
+
+        /// Creates a new [`SpeciatedFitnessEliminator`] from a regular [`FitnessEliminator`] and a speciation threshold.
+        /// Useful since you can use the builder for [`FitnessEliminator`] to construct the fitness function and observer, then convert it into a [`SpeciatedFitnessEliminator`] with this method.
+        pub fn from_fitness_eliminator(fitness_eliminator: FitnessEliminator<F, G, O>, speciation_threshold: f32) -> Self {
+            Self::new(fitness_eliminator.fitness_fn, speciation_threshold, fitness_eliminator.threshold, Some(fitness_eliminator.observer))
+        }
+
+        /// Calculates the fitness of each genome, dividing by the number of genomes in its species, and sorts them by fitness.
+        /// Returns a vector of tuples containing the genome and its fitness score.
+        #[cfg(not(feature = "rayon"))]
+        pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
+            let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold);
+            let mut fitnesses = vec![0.0; genomes.len()];
+
+            for species in population.species {
+                let len = species.len() as f32;
+                for index in species {
+                    let genome = &genomes[index];
+                    let fitness = self.fitness_fn.fitness(genome) / len;
+                    fitnesses[index] = fitness;
+                }
+            }
+
+            let mut fitnesses: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses.into_iter()).collect();
+            fitnesses.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
+            fitnesses
+        }
+
+        /// Calculates the fitness of each genome, dividing by the number of genomes in its species, and sorts them by fitness.
+        /// Returns a vector of tuples containing the genome and its fitness score.
+        #[cfg(feature = "rayon")]
+        pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
+            let population = SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold);
+            
+            // Create fitnesses array with default values
+            let mut fitnesses = vec![0.0; genomes.len()];
+            
+            // Process species sequentially, but within each species compute fitnesses in parallel
+            for species in population.species {
+                let len = species.len() as f32;
+                let updates: Vec<(usize, f32)> = species
+                    .par_iter()
+                    .map(|&index| {
+                        let genome = &genomes[index];
+                        let fitness = self.fitness_fn.fitness(genome) / len;
+                        (index, fitness)
+                    })
+                    .collect();
+                
+                for (index, fitness) in updates {
+                    fitnesses[index] = fitness;
+                }
+            }
+            
+            // Pair genomes with fitnesses and sort
+            let mut result: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses.into_iter()).collect();
+            result.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
+            result
+        }
+    }
+
+    impl<F, G, O> Eliminator<G> for SpeciatedFitnessEliminator<F, G, O>
+    where
+        F: FeatureBoundedFitnessFn<G>,
+        G: Speciated + FeatureBoundedGenome,
+        O: FeatureBoundedFitnessObserver<G>,
+    {
+        #[cfg(not(feature = "rayon"))]
+        fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
+            let mut fitnesses = self.calculate_and_sort(genomes);
+            let median_index = (fitnesses.len() as f32) * self.keep_threshold;
+            fitnesses.truncate(median_index as usize + 1);
+            fitnesses.into_iter().map(|(g, _)| g).collect()
+        }
+
+        #[cfg(feature = "rayon")]
+        fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
+            let mut fitnesses = self.calculate_and_sort(genomes);
+            let median_index = (fitnesses.len() as f32) * self.keep_threshold;
+            fitnesses.truncate(median_index as usize + 1);
+            fitnesses.into_par_iter().map(|(g, _)| g).collect()
+        }
+    }
+}
+
+#[cfg(feature = "speciation")]
+pub use speciation::*;
