@@ -167,9 +167,12 @@ mod speciation {
     /// This can be used to prevent species from going extinct due to bad luck in crossover.
     pub enum ActionIfIsolated {
         /// Do nothing, allowing the species to go extinct if the genome is not fit enough.
+        /// Note that if all species have only one member (not likely, but possible),
+        /// this can result in the repopulator hanging.
         DoNothing,
 
-        /// Perform crossover between the genome and itself to create a new member of the species. This can help prevent extinction while still introducing some variation, but may be more computationally expensive than cloning.
+        /// Perform crossover between the genome and itself to create a new member of the species.
+        /// This can help prevent species from going extinct, but can also lead to less diversity in the population.
         SelfCrossover,
     }
 

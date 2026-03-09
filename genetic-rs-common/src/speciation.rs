@@ -106,6 +106,7 @@ impl SpeciatedPopulation {
     /// Round robin, but also returns the species index along with the genome index.
     /// Note that the genome index value is the index in the original genome vector, not the index in the species vector.
     /// However, the species index represents the index in [`Self::species`].
+    /// Format is (species_index, genome_index).
     pub fn round_robin_enumerate(&self) -> impl Iterator<Item = (usize, usize)> + '_ {
         let species = &self.species;
         let mut idx_in_species = vec![0; self.species.len()];
