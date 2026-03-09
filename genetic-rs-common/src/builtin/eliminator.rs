@@ -636,22 +636,20 @@ mod speciation {
 
             for species in population.species {
                 let len = species.len() as f32;
-                let updates: Vec<(usize, f32)> = species
-                    .par_iter()
-                    .map(|&index| {
-                        let genome = &genomes[index];
-                        let fitness = self.inner.fitness_fn.fitness(genome) / len;
-                        (index, fitness)
-                    })
-                    .collect();
-
-                for (index, fitness) in updates {
-                    fitnesses[index] = fitness;
+                debug_assert!(len != 0.0);
+                for index in species {
+                    let genome = &genomes[index];
+                    let fitness = self.inner.fitness_fn.fitness(genome);
+                    if fitness < 0.0 {
+                        fitnesses[index] = fitness * len;
+                    } else {
+                        fitnesses[index] = fitness / len;
+                    }
                 }
             }
 
             let mut result: Vec<(G, f32)> =
-                genomes.into_iter().zip(fitnesses.into_iter()).collect();
+                genomes.into_iter().zip(fitnesses).collect();
             result.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
             result
         }
