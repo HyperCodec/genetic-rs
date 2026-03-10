@@ -56,5 +56,21 @@ name = "derive"
 required-features = ["derive"]
 
 [[test]]
+name = "simulation"
+required-features = ["builtin", "genrand"]
+
+[[test]]
+name = "knockout"
+required-features = ["knockout", "genrand"]
+
+[[test]]
+name = "repopulator"
+required-features = ["crossover", "genrand"]
+
+[[test]]
+name = "speciation"
+required-features = ["speciation", "genrand"]
+
+[[test]]
 name = "derive_macros"
 required-features = ["derive", "genrand", "crossover"]
