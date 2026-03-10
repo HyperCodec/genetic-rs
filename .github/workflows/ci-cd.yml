@@ -24,6 +24,24 @@ jobs:
             - name: Run Clippy
               run: cargo clippy --all-features -- -D warnings
     
+    examples:
+        runs-on: ubuntu-latest
+        name: Run Examples
+        permissions:
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - name: Run readme_ex example
+              run: cargo run --example readme_ex --features builtin,genrand
+            - name: Run crossover example
+              run: cargo run --example crossover --features crossover,genrand
+            - name: Run knockout example
+              run: cargo run --example knockout --features knockout,crossover,genrand
+            - name: Run derive example
+              run: cargo run --example derive --features derive
+            - name: Run speciation example
+              run: cargo run --example speciation --features speciation,genrand
+
     fmt:
         runs-on: ubuntu-latest
         name: Formatting Checks
