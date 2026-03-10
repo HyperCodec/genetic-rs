@@ -9,13 +9,14 @@ A small framework for managing genetic algorithms.
 ### Features
 First off, this crate comes with the `builtin`, `genrand`, `crossover`, `knockout`, and `speciation` features by default. If you want the simulation to be parallelized (which is most usecases), add the `rayon` feature. There are also some convenient macros with the `derive` feature.
 
+### Ecosystem
+This framework was created with a high degree of modularity in mind, allowing other crates to contribute to the ecosystem. Here's a list of some good crates:
+- [neat](https://crates.io/crates/neat) - Handles complex reproduction and prediction logic for the NEAT algorithm, allowing you to create AI simulations with ease. It also functions as a pretty good example for the more complex usecases of the crate's traits.
+- [genetic-rs-extras](https://crates.io/crates/genetic-rs-extras) - A companion crate with quality-of-life improvements and utility features.
+
+If you have a `genetic-rs`-based crate and you'd like it to be featured here, submit a PR or discussion post and I'll consider it.
+
 ### How to Use
-> [!NOTE] 
-> If you are interested in implementing NEAT with this, or just want a more complex example, check out the [neat](https://crates.io/crates/neat) crate
-
-> [!TIP]
-> For quality of life improvements and utility features, consider using [genetic-rs-extras](https://crates.io/crates/genetic-rs-extras).
-
 Here's a simple genetic algorithm:
 
 ```rust
