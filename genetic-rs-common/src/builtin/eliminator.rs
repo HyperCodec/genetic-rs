@@ -54,7 +54,7 @@ impl<G> FitnessObserver<G> for () {
 
 impl<F, G> FitnessObserver<G> for F
 where
-    F: Fn(&[(G, f32)]),
+    F: FnMut(&[(G, f32)]),
     G: FeatureBoundedGenome,
 {
     fn observe(&mut self, fitnesses: &[(G, f32)]) {
