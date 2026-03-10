@@ -36,16 +36,40 @@ unexpected_cfgs = { level = "allow", check-cfg = ["cfg(publish)", "cfg(docsrs)"]
 rand = "0.10.0"
 
 [[example]]
+name = "readme_ex"
+required-features = ["builtin", "genrand"]
+
+[[example]]
 name = "crossover"
-required-features = ["crossover"]
+required-features = ["crossover", "genrand"]
+
+[[example]]
+name = "knockout"
+required-features = ["knockout", "crossover", "genrand"]
 
 [[example]]
 name = "speciation"
-required-features = ["speciation"]
+required-features = ["speciation", "genrand"]
 
 [[example]]
 name = "derive"
 required-features = ["derive"]
+
+[[test]]
+name = "simulation"
+required-features = ["builtin", "genrand"]
+
+[[test]]
+name = "knockout"
+required-features = ["knockout", "genrand"]
+
+[[test]]
+name = "repopulator"
+required-features = ["crossover", "genrand"]
+
+[[test]]
+name = "speciation"
+required-features = ["speciation", "genrand"]
 
 [[test]]
 name = "derive_macros"
