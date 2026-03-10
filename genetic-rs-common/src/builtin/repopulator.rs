@@ -284,8 +284,9 @@ mod speciation {
                 SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
 
             // if all species are isolated, we fall back to the inner crossover repopulator to avoid an infinite loop.
-            if matches!(self.action_if_isolated, ActionIfIsolated::DoNothing)
-                && !population.species().iter().any(|s| s.len() >= 2)
+            if (matches!(self.action_if_isolated, ActionIfIsolated::DoNothing)
+                && !population.species().iter().any(|s| s.len() >= 2)) ||
+                (matches!(self.action_if_isolated, ActionIfIsolated::CrossoverRandom) && initial_size == 1)
             {
                 self.inner.repopulate(genomes, target_size);
                 return;
