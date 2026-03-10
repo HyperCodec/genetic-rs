@@ -13,6 +13,9 @@ First off, this crate comes with the `builtin`, `genrand`, `crossover`, `knockou
 > [!NOTE] 
 > If you are interested in implementing NEAT with this, or just want a more complex example, check out the [neat](https://crates.io/crates/neat) crate
 
+> [!TIP]
+> For quality of life improvements and utility features, consider using [genetic-rs-extras](https://crates.io/crates/genetic-rs-extras).
+
 Here's a simple genetic algorithm:
 
 ```rust
