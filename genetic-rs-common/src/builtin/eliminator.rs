@@ -81,6 +81,56 @@ where
     }
 }
 
+impl<G, A, B> Default for LayeredObserver<G, A, B>
+where
+    A: Default + FitnessObserver<G>,
+    B: Default + FitnessObserver<G>,
+{
+    fn default() -> Self {
+        Self(A::default(), B::default(), std::marker::PhantomData)
+    }
+}
+
+impl<G, A, B> Clone for LayeredObserver<G, A, B>
+where
+    A: Clone + FitnessObserver<G>,
+    B: Clone + FitnessObserver<G>,
+{
+    fn clone(&self) -> Self {
+        Self(self.0.clone(), self.1.clone(), std::marker::PhantomData)
+    }
+}
+
+impl<G, A, B> std::fmt::Debug for LayeredObserver<G, A, B>
+where
+    A: std::fmt::Debug + FitnessObserver<G>,
+    B: std::fmt::Debug + FitnessObserver<G>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("LayeredObserver")
+            .field(&self.0)
+            .field(&self.1)
+            .finish()
+    }
+}
+
+impl<G, A, B> PartialEq for LayeredObserver<G, A, B>
+where
+    A: PartialEq + FitnessObserver<G>,
+    B: PartialEq + FitnessObserver<G>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
+    }
+}
+
+impl<G, A, B> Eq for LayeredObserver<G, A, B>
+where
+    A: Eq + FitnessObserver<G>,
+    B: Eq + FitnessObserver<G>,
+{
+}
+
 #[cfg(not(feature = "rayon"))]
 #[doc(hidden)]
 pub trait FeatureBoundedFitnessObserver<G: FeatureBoundedGenome>: FitnessObserver<G> {}
