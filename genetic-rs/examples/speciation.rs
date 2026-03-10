@@ -112,7 +112,8 @@ fn fitness(genome: &MyGenome) -> f32 {
 
 fn print_fitnesses(fitnesses: &[(MyGenome, f32)]) {
     // note that with SpeciatedFitnessEliminator,
-    // these values are divided by the number of genomes in the species.
+    // these values are divided by the number of genomes in the species if positive,
+    // multiplied if negative.
     let hi = fitnesses[0].1;
     let med = fitnesses[fitnesses.len() / 2].1;
     let lo = fitnesses[fitnesses.len() - 1].1;
