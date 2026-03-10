@@ -1,5 +1,3 @@
-use std::ops::Not;
-
 use crate::Eliminator;
 use crate::FeatureBoundedGenome;
 
@@ -390,7 +388,7 @@ mod knockout {
         }
     }
 
-    impl Not for KnockoutWinner {
+    impl std::ops::Not for KnockoutWinner {
         type Output = Self;
 
         fn not(self) -> Self::Output {

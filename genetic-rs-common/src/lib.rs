@@ -130,16 +130,7 @@ where
     fn gen_random(rng: &mut impl rand::Rng, amount: usize) -> Self;
 }
 
-/// Rayon version of the [`GenerateRandomCollection`] trait
-#[cfg(all(feature = "genrand", feature = "rayon"))]
-pub trait GenerateRandomCollectionParallel<T>
-where
-    T: GenerateRandom + Send,
-{
-    /// Generate a random collection of the inner objects with the given amount. Does not pass in rng like the sync counterpart.
-    fn par_gen_random(amount: usize) -> Self;
-}
-
+#[cfg(feature = "genrand")]
 impl<C, T> GenerateRandomCollection<T> for C
 where
     C: FromIterator<T>,
@@ -148,6 +139,16 @@ where
     fn gen_random(rng: &mut impl rand::Rng, amount: usize) -> Self {
         (0..amount).map(|_| T::gen_random(rng)).collect()
     }
+}
+
+/// Rayon version of the [`GenerateRandomCollection`] trait
+#[cfg(all(feature = "genrand", feature = "rayon"))]
+pub trait GenerateRandomCollectionParallel<T>
+where
+    T: GenerateRandom + Send,
+{
+    /// Generate a random collection of the inner objects with the given amount. Does not pass in rng like the sync counterpart.
+    fn par_gen_random(amount: usize) -> Self;
 }
 
 #[cfg(feature = "rayon")]
