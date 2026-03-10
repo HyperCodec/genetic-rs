@@ -8,6 +8,10 @@
 #[cfg(feature = "builtin")]
 pub mod builtin;
 
+/// Common speciation code used for speciated eliminators and repopulators.
+#[cfg(feature = "speciation")]
+pub mod speciation;
+
 /// Used to quickly import everything this crate has to offer.
 /// Simply add `use genetic_rs::prelude::*` to begin using this crate.
 pub mod prelude;
