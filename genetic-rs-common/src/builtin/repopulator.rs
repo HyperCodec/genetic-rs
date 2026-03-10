@@ -84,6 +84,23 @@ where
     }
 }
 
+/// Helper trait for creating a new population from a parent genome. This is a shortcut for using [`MitosisRepopulator`]
+/// and is convenient for things like resuming a simulation from a deserialized elite.
+pub trait FromParent<G: Mitosis> {
+    /// Create a new population from a parent genome and a count of how many genomes to create.
+    /// The new population should be created by mutating the parent genome (i.e. [`Mitosis`]).
+    fn from_parent(parent: G, count: usize, ctx: G::Context, rate: f32) -> Self;
+}
+
+impl<G: Mitosis> FromParent<G> for Vec<G> {
+    fn from_parent(parent: G, count: usize, ctx: G::Context, rate: f32) -> Self {
+        let mut repopulator = MitosisRepopulator::new(rate, ctx);
+        let mut genomes = vec![parent];
+        repopulator.repopulate(&mut genomes, count);
+        genomes
+    }
+}
+
 #[cfg(feature = "crossover")]
 mod crossover {
     use rand::RngExt;
