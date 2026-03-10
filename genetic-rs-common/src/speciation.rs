@@ -98,11 +98,8 @@ impl SpeciatedPopulation {
 
             let cur_species = &species[species_i];
             let genome_index = cur_species[idx_in_species[species_i]];
-            idx_in_species[species_i] += 1;
-            if idx_in_species[species_i] >= cur_species.len() {
-                idx_in_species[species_i] = 0;
-                species_i = (species_i + 1) % species.len();
-            }
+            idx_in_species[species_i] = (idx_in_species[species_i] + 1) % cur_species.len();
+            species_i = (species_i + 1) % species.len();
             Some(genome_index)
         })
     }
