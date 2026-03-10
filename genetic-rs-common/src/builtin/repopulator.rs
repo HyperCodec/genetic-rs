@@ -253,6 +253,10 @@ mod speciation {
     {
         fn repopulate(&mut self, genomes: &mut Vec<G>, target_size: usize) {
             let initial_size = genomes.len();
+            if initial_size >= target_size {
+                return;
+            }
+
             let mut rng = rand::rng();
             let population =
                 SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);

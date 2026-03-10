@@ -566,7 +566,6 @@ mod speciation {
         O: FeatureBoundedFitnessObserver<G>,
     {
         /// Creates a new [`SpeciatedFitnessEliminator`] with a given fitness function and thresholds.
-        /// Panics if the thresholds are not between 0.0 and 1.0.
         pub fn new(
             fitness_fn: F,
             speciation_threshold: f32,
