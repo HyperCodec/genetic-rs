@@ -86,8 +86,10 @@ fn layered_observer_debug() {
 
 #[test]
 fn layered_observer_partial_eq() {
-    let a: LayeredObserver<(), _, _> = TrackingObserver::default().layer(TrackingObserver::default());
-    let b: LayeredObserver<(), _, _> = TrackingObserver::default().layer(TrackingObserver::default());
+    let a: LayeredObserver<(), _, _> =
+        TrackingObserver::default().layer(TrackingObserver::default());
+    let b: LayeredObserver<(), _, _> =
+        TrackingObserver::default().layer(TrackingObserver::default());
     assert_eq!(a, b);
 }
 
