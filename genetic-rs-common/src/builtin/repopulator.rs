@@ -89,6 +89,8 @@ where
 pub trait FromParent<G: Mitosis> {
     /// Create a new population from a parent genome and a count of how many genomes to create.
     /// The new population should be created by mutating the parent genome (i.e. [`Mitosis`]).
+    /// The function is essentially a shortcut for creating a new [`MitosisRepopulator`] and using
+    /// it to repopulate a new population from the parent genome.
     fn from_parent(parent: G, count: usize, ctx: G::Context, rate: f32) -> Self;
 }
 
