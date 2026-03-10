@@ -177,8 +177,9 @@ mod speciation {
     /// This can be used to prevent species from going extinct due to bad luck in crossover.
     pub enum ActionIfIsolated {
         /// Do nothing, allowing the species to go extinct if the genome is not fit enough.
-        /// Note that if all species have only one member (not likely, but possible),
-        /// this can result in the repopulator hanging.
+        /// If all species happen to be isolated (no species has >= 2 members), the
+        /// repopulator automatically falls back to [`CrossoverRepopulator`] to avoid
+        /// an infinite loop.
         DoNothing,
 
         /// Perform crossover between the genome and itself to create a new member of the species.
@@ -260,6 +261,14 @@ mod speciation {
             let mut rng = rand::rng();
             let population =
                 SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
+
+            // if all species are isolated, we fall back to the inner crossover repopulator to avoid an infinite loop.
+            if matches!(self.action_if_isolated, ActionIfIsolated::DoNothing)
+                && !population.species.iter().any(|s| s.len() >= 2)
+            {
+                self.inner.repopulate(genomes, target_size);
+                return;
+            }
 
             let amount_to_make = target_size - initial_size;
             let mut species_cycle = population.round_robin_enumerate();
