@@ -96,6 +96,8 @@ pub trait FromParent<G: Mitosis> {
 
 impl<G: Mitosis> FromParent<G> for Vec<G> {
     fn from_parent(parent: G, count: usize, ctx: G::Context, rate: f32) -> Self {
+        assert!(count > 0, "Count must be greater than 0");
+
         let mut repopulator = MitosisRepopulator::new(rate, ctx);
         let mut genomes = vec![parent];
         repopulator.repopulate(&mut genomes, count);
