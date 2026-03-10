@@ -283,7 +283,7 @@ mod speciation {
 
             // if all species are isolated, we fall back to the inner crossover repopulator to avoid an infinite loop.
             if matches!(self.action_if_isolated, ActionIfIsolated::DoNothing)
-                && !population.species.iter().any(|s| s.len() >= 2)
+                && !population.species().iter().any(|s| s.len() >= 2)
             {
                 self.inner.repopulate(genomes, target_size);
                 return;
@@ -295,7 +295,7 @@ mod speciation {
             let mut i = 0;
             while i < amount_to_make {
                 let (species_i, genome_i) = species_cycle.next().unwrap();
-                let species = &population.species[species_i];
+                let species = &population.species()[species_i];
                 let parent1 = &genomes[genome_i];
                 if species.len() < 2 {
                     match self.action_if_isolated {
@@ -314,7 +314,7 @@ mod speciation {
                         ActionIfIsolated::CrossoverSimilarSpecies => {
                             let mut best_species_i = 0;
                             let mut best_divergence = f32::MAX;
-                            for (j, species) in population.species.iter().enumerate() {
+                            for (j, species) in population.species().iter().enumerate() {
                                 if j == species_i || species.is_empty() {
                                     continue;
                                 }
@@ -326,7 +326,7 @@ mod speciation {
                                 }
                             }
 
-                            let best_species = &population.species[best_species_i];
+                            let best_species = &population.species()[best_species_i];
                             let j = rng.random_range(0..best_species.len());
                             let parent2 = &genomes[best_species[j]];
                             let child = parent1.crossover(

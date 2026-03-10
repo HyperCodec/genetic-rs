@@ -19,8 +19,9 @@ pub trait Speciated {
 pub struct SpeciatedPopulation {
     /// The species in this population. Each species is a vector of indices into the original genome vector.
     /// The first genome in a species is its representation (i.e. the one that gets compared to other genomes to determine
-    /// if they belong in the species)
-    pub species: Vec<Vec<usize>>,
+    /// if they belong in the species).
+    /// Invariant: every inner `Vec` is non-empty.
+    species: Vec<Vec<usize>>,
 
     /// The threshold used to determine if a genome belongs in a species. If the divergence between a genome and the representative genome
     /// of a species is less than this threshold, then the genome belongs in that species.
@@ -28,6 +29,20 @@ pub struct SpeciatedPopulation {
 }
 
 impl SpeciatedPopulation {
+    /// Creates a new, empty [`SpeciatedPopulation`] with the given threshold.
+    pub fn new(threshold: f32) -> Self {
+        Self {
+            species: Vec::new(),
+            threshold,
+        }
+    }
+
+    /// Returns the species in this population.
+    /// Each inner slice is guaranteed to be non-empty.
+    pub fn species(&self) -> &[Vec<usize>] {
+        &self.species
+    }
+
     /// Inserts a genome into the speciated population.
     /// Returns whether a new species was created by this insertion.
     pub fn insert_genome<G: Speciated>(
@@ -48,10 +63,7 @@ impl SpeciatedPopulation {
     /// Note that this can be O(n^2) worst case, but is typically much faster in practice,
     /// especially if the genome structure doesn't mutate often.
     pub fn from_genomes<G: Speciated>(population: &[G], threshold: f32, ctx: &G::Context) -> Self {
-        let mut speciated_population = SpeciatedPopulation {
-            species: Vec::new(),
-            threshold,
-        };
+        let mut speciated_population = SpeciatedPopulation::new(threshold);
         for index in 0..population.len() {
             speciated_population.insert_genome(index, population, ctx);
         }

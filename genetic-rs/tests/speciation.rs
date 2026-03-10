@@ -69,9 +69,9 @@ fn fitness(g: &Genome) -> f32 {
 fn identical_genomes_in_same_species() {
     let genomes: Vec<Genome> = (0..5).map(|_| Genome { class: 0, val: 0.0 }).collect();
     let pop = SpeciatedPopulation::from_genomes(&genomes, 0.5, &());
-    assert_eq!(pop.species.len(), 1, "expected a single species");
+    assert_eq!(pop.species().len(), 1, "expected a single species");
     assert_eq!(
-        pop.species[0].len(),
+        pop.species()[0].len(),
         5,
         "all genomes must belong to the single species"
     );
@@ -82,7 +82,7 @@ fn identical_genomes_in_same_species() {
 fn different_class_genomes_in_different_species() {
     let genomes: Vec<Genome> = (0..4).map(|i| Genome { class: i, val: 0.0 }).collect();
     let pop = SpeciatedPopulation::from_genomes(&genomes, 0.5, &());
-    assert_eq!(pop.species.len(), 4);
+    assert_eq!(pop.species().len(), 4);
 }
 
 /// With a threshold > 1.0 (larger than the max divergence) all genomes,
@@ -97,7 +97,7 @@ fn high_threshold_groups_all_genomes() {
         .collect();
     // Divergence is at most 1.0; with threshold 1.5 everything is "close enough".
     let pop = SpeciatedPopulation::from_genomes(&genomes, 1.5, &());
-    assert_eq!(pop.species.len(), 1, "all genomes must be in one species");
+    assert_eq!(pop.species().len(), 1, "all genomes must be in one species");
 }
 
 /// Every genome index must appear in exactly one species.
@@ -113,7 +113,7 @@ fn every_genome_index_appears_exactly_once() {
     let pop = SpeciatedPopulation::from_genomes(&genomes, 0.5, &());
 
     let mut seen = vec![false; n];
-    for species in &pop.species {
+    for species in pop.species() {
         for &idx in species {
             assert!(
                 !seen[idx],
@@ -139,13 +139,11 @@ fn insert_genome_creates_new_species_for_novel_genome() {
         Genome { class: 0, val: 0.0 },
         Genome { class: 1, val: 0.0 }, // divergence 1.0 > threshold 0.5 → new species
     ];
-    let mut pop = SpeciatedPopulation {
-        species: vec![vec![0]],
-        threshold: 0.5,
-    };
+    let mut pop = SpeciatedPopulation::new(0.5);
+    pop.insert_genome(0, &genomes, &());
     let created_new = pop.insert_genome(1, &genomes, &());
     assert!(created_new, "expected a new species to be created");
-    assert_eq!(pop.species.len(), 2);
+    assert_eq!(pop.species().len(), 2);
 }
 
 /// Inserting a genome from an existing class must join that species.
@@ -155,17 +153,15 @@ fn insert_genome_joins_existing_species_for_similar_genome() {
         Genome { class: 0, val: 0.0 },
         Genome { class: 0, val: 1.0 }, // divergence 0.0 < threshold 0.5 → joins species
     ];
-    let mut pop = SpeciatedPopulation {
-        species: vec![vec![0]],
-        threshold: 0.5,
-    };
+    let mut pop = SpeciatedPopulation::new(0.5);
+    pop.insert_genome(0, &genomes, &());
     let created_new = pop.insert_genome(1, &genomes, &());
     assert!(
         !created_new,
         "must not create a new species for a similar genome"
     );
-    assert_eq!(pop.species.len(), 1);
-    assert_eq!(pop.species[0].len(), 2);
+    assert_eq!(pop.species().len(), 1);
+    assert_eq!(pop.species()[0].len(), 2);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -208,7 +204,7 @@ fn round_robin_enumerate_species_index_is_valid() {
 
     for (species_i, genome_i) in pop.round_robin_enumerate().take(12) {
         assert!(
-            pop.species[species_i].contains(&genome_i),
+            pop.species()[species_i].contains(&genome_i),
             "genome index {genome_i} is not in species {species_i}"
         );
     }

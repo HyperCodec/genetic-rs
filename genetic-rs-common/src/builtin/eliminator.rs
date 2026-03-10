@@ -654,10 +654,10 @@ mod speciation {
                 SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
             let mut fitnesses = vec![0.0; genomes.len()];
 
-            for species in population.species {
+            for species in population.species() {
                 let len = species.len() as f32;
                 debug_assert!(len != 0.0);
-                for index in species {
+                for &index in species {
                     let genome = &genomes[index];
                     let fitness = self.inner.fitness_fn.fitness(genome);
                     if fitness < 0.0 {
@@ -682,10 +682,10 @@ mod speciation {
 
             let mut fitnesses = vec![0.0; genomes.len()];
 
-            for species in population.species {
+            for species in population.species() {
                 let len = species.len() as f32;
                 debug_assert!(len != 0.0);
-                for index in species {
+                for &index in species {
                     let genome = &genomes[index];
                     let fitness = self.inner.fitness_fn.fitness(genome);
                     if fitness < 0.0 {
