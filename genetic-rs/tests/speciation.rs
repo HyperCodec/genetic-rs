@@ -67,12 +67,7 @@ fn fitness(g: &Genome) -> f32 {
 /// All identical genomes must end up in a single species.
 #[test]
 fn identical_genomes_in_same_species() {
-    let genomes: Vec<Genome> = (0..5)
-        .map(|_| Genome {
-            class: 0,
-            val: 0.0,
-        })
-        .collect();
+    let genomes: Vec<Genome> = (0..5).map(|_| Genome { class: 0, val: 0.0 }).collect();
     let pop = SpeciatedPopulation::from_genomes(&genomes, 0.5, &());
     assert_eq!(pop.species.len(), 1, "expected a single species");
     assert_eq!(
@@ -85,12 +80,7 @@ fn identical_genomes_in_same_species() {
 /// Genomes of four distinct classes must form four separate species.
 #[test]
 fn different_class_genomes_in_different_species() {
-    let genomes: Vec<Genome> = (0..4)
-        .map(|i| Genome {
-            class: i,
-            val: 0.0,
-        })
-        .collect();
+    let genomes: Vec<Genome> = (0..4).map(|i| Genome { class: i, val: 0.0 }).collect();
     let pop = SpeciatedPopulation::from_genomes(&genomes, 0.5, &());
     assert_eq!(pop.species.len(), 4);
 }
@@ -125,7 +115,10 @@ fn every_genome_index_appears_exactly_once() {
     let mut seen = vec![false; n];
     for species in &pop.species {
         for &idx in species {
-            assert!(!seen[idx], "genome index {idx} appears in more than one species");
+            assert!(
+                !seen[idx],
+                "genome index {idx} appears in more than one species"
+            );
             seen[idx] = true;
         }
     }
@@ -143,14 +136,8 @@ fn every_genome_index_appears_exactly_once() {
 #[test]
 fn insert_genome_creates_new_species_for_novel_genome() {
     let genomes = vec![
-        Genome {
-            class: 0,
-            val: 0.0,
-        },
-        Genome {
-            class: 1,
-            val: 0.0,
-        }, // divergence 1.0 > threshold 0.5 → new species
+        Genome { class: 0, val: 0.0 },
+        Genome { class: 1, val: 0.0 }, // divergence 1.0 > threshold 0.5 → new species
     ];
     let mut pop = SpeciatedPopulation {
         species: vec![vec![0]],
@@ -165,21 +152,18 @@ fn insert_genome_creates_new_species_for_novel_genome() {
 #[test]
 fn insert_genome_joins_existing_species_for_similar_genome() {
     let genomes = vec![
-        Genome {
-            class: 0,
-            val: 0.0,
-        },
-        Genome {
-            class: 0,
-            val: 1.0,
-        }, // divergence 0.0 < threshold 0.5 → joins species
+        Genome { class: 0, val: 0.0 },
+        Genome { class: 0, val: 1.0 }, // divergence 0.0 < threshold 0.5 → joins species
     ];
     let mut pop = SpeciatedPopulation {
         species: vec![vec![0]],
         threshold: 0.5,
     };
     let created_new = pop.insert_genome(1, &genomes, &());
-    assert!(!created_new, "must not create a new species for a similar genome");
+    assert!(
+        !created_new,
+        "must not create a new species for a similar genome"
+    );
     assert_eq!(pop.species.len(), 1);
     assert_eq!(pop.species[0].len(), 2);
 }
@@ -273,16 +257,8 @@ fn speciated_sim_population_size_preserved() {
 /// → the class-1 genome (raw 0.5) must survive despite the lower raw fitness.
 #[test]
 fn speciation_protects_rare_species() {
-    let mut class0_genomes: Vec<Genome> = (0..4)
-        .map(|_| Genome {
-            class: 0,
-            val: 1.0,
-        })
-        .collect();
-    let rare = Genome {
-        class: 1,
-        val: 0.5,
-    };
+    let mut class0_genomes: Vec<Genome> = (0..4).map(|_| Genome { class: 0, val: 1.0 }).collect();
+    let rare = Genome { class: 1, val: 0.5 };
     class0_genomes.push(rare.clone());
 
     let mut eliminator = SpeciatedFitnessEliminator::new(fitness, 0.5, 0.5, (), ());

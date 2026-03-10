@@ -104,7 +104,11 @@ fn fitness_eliminator_keeps_top_by_fitness() {
     let survivors = eliminator.eliminate(genomes);
 
     // threshold=0.5, n=10 → floor(10*0.5) + 1 = 6 survivors.
-    assert_eq!(survivors.len(), 6, "expected 6 survivors with default threshold");
+    assert_eq!(
+        survivors.len(),
+        6,
+        "expected 6 survivors with default threshold"
+    );
 
     // Every survivor must be in the top half (fitness ≥ 4.0).
     for g in &survivors {
@@ -165,7 +169,11 @@ fn fitness_eliminator_custom_threshold() {
     let genomes: Vec<Genome> = (0..10).map(|i| Genome(i as f32)).collect();
     let mut eliminator = FitnessEliminator::new(fitness, 0.3, ());
     let survivors = eliminator.eliminate(genomes);
-    assert_eq!(survivors.len(), 4, "expected 4 survivors with threshold=0.3");
+    assert_eq!(
+        survivors.len(),
+        4,
+        "expected 4 survivors with threshold=0.3"
+    );
 }
 
 /// [`FitnessEliminator::new`] must panic when the threshold is outside [0, 1].
@@ -219,8 +227,7 @@ fn observer_called_once_per_generation() {
 
     sim.perform_generations(7);
     assert_eq!(
-        sim.eliminator.observer.0,
-        7,
+        sim.eliminator.observer.0, 7,
         "observer must be called once per generation"
     );
 }

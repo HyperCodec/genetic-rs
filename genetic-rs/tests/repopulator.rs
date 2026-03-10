@@ -76,7 +76,10 @@ fn mitosis_zero_mutation_rate_produces_clone() {
     let parent = Genome(42.0);
     let mut rng = rand::rng();
     let child = parent.divide(&(), 0.0, &mut rng);
-    assert_eq!(child, parent, "child at rate 0.0 must be identical to parent");
+    assert_eq!(
+        child, parent,
+        "child at rate 0.0 must be identical to parent"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,8 +150,7 @@ fn from_parent_includes_original_parent() {
     let parent = Genome(7.0);
     let population = Vec::<Genome>::from_parent(parent.clone(), 5, (), 0.0);
     assert_eq!(
-        population[0],
-        parent,
+        population[0], parent,
         "the first element must be the original parent"
     );
 }
