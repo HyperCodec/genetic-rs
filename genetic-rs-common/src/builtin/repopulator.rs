@@ -312,7 +312,7 @@ mod speciation {
                             continue;
                         }
                         ActionIfIsolated::CrossoverRandom => {
-                            let mut j = rng.random_range(1..genomes.len());
+                            let mut j = rng.random_range(1..initial_size);
                             if j == genome_i {
                                 j = 0;
                             }
