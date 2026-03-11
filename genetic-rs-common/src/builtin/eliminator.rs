@@ -753,8 +753,7 @@ mod speciation {
             self.inner.observer.observe(&observer_pairs);
 
             // Re-sort by divided fitness and truncate for speciation-aware elimination.
-            let mut with_divided: Vec<_> =
-                observer_pairs.into_iter().zip(divided_vals).collect();
+            let mut with_divided: Vec<_> = observer_pairs.into_iter().zip(divided_vals).collect();
             with_divided.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
             with_divided.truncate(median_index as usize + 1);
             with_divided.into_iter().map(|((g, _), _)| g).collect()
@@ -784,8 +783,7 @@ mod speciation {
             self.inner.observer.observe(&observer_pairs);
 
             // Re-sort by divided fitness and truncate for speciation-aware elimination.
-            let mut with_divided: Vec<_> =
-                observer_pairs.into_iter().zip(divided_vals).collect();
+            let mut with_divided: Vec<_> = observer_pairs.into_iter().zip(divided_vals).collect();
             with_divided.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
             with_divided.truncate(median_index as usize + 1);
             with_divided.into_par_iter().map(|((g, _), _)| g).collect()
