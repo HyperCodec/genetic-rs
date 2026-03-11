@@ -644,58 +644,80 @@ mod speciation {
             }
         }
 
-        /// Calculates the fitness of each genome, dividing by the number of genomes in its species, and sorts them by fitness.
-        /// Returns a vector of tuples containing the genome and its fitness score.
+        /// Computes raw and species-divided fitness for every genome.
+        ///
+        /// Returns `(raw_fitnesses, divided_fitnesses)` where both vecs are indexed
+        /// the same way as `genomes`.  The divided value is used for elimination
+        /// (to balance species pressure); the raw value is what observers see.
         #[cfg(not(feature = "rayon"))]
-        pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
+        fn calculate_fitnesses(&self, genomes: &[G]) -> (Vec<f32>, Vec<f32>) {
             let population =
-                SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
-            let mut fitnesses = vec![0.0; genomes.len()];
+                SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
+            let mut raw = vec![0.0_f32; genomes.len()];
+            let mut divided = vec![0.0_f32; genomes.len()];
 
             for species in population.species() {
                 let len = species.len() as f32;
                 debug_assert!(len != 0.0);
                 for &index in species {
-                    let genome = &genomes[index];
-                    let fitness = self.inner.fitness_fn.fitness(genome);
-                    if fitness < 0.0 {
-                        fitnesses[index] = fitness * len;
+                    let fitness = self.inner.fitness_fn.fitness(&genomes[index]);
+                    raw[index] = fitness;
+                    divided[index] = if fitness < 0.0 {
+                        fitness * len
                     } else {
-                        fitnesses[index] = fitness / len;
-                    }
+                        fitness / len
+                    };
                 }
             }
 
-            let mut fitnesses: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses).collect();
-            fitnesses.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
-            fitnesses
+            (raw, divided)
+        }
+
+        /// Computes raw and species-divided fitness for every genome (parallel version).
+        ///
+        /// Species membership is determined sequentially first (greedy clustering), then
+        /// fitness functions are evaluated in parallel using rayon.
+        #[cfg(feature = "rayon")]
+        fn calculate_fitnesses(&self, genomes: &[G]) -> (Vec<f32>, Vec<f32>) {
+            let population =
+                SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
+
+            let mut species_lens = vec![0.0_f32; genomes.len()];
+            for species in population.species() {
+                let len = species.len() as f32;
+                debug_assert!(len != 0.0);
+                for &index in species {
+                    species_lens[index] = len;
+                }
+            }
+
+            let fitness_fn = &self.inner.fitness_fn;
+            let results: Vec<(f32, f32)> = genomes
+                .par_iter()
+                .zip(species_lens.par_iter())
+                .map(|(genome, &len)| {
+                    let fitness = fitness_fn.fitness(genome);
+                    let divided = if fitness < 0.0 {
+                        fitness * len
+                    } else {
+                        fitness / len
+                    };
+                    (fitness, divided)
+                })
+                .collect();
+
+            let raw = results.iter().map(|&(r, _)| r).collect();
+            let divided = results.iter().map(|&(_, d)| d).collect();
+
+            (raw, divided)
         }
 
         /// Calculates the fitness of each genome, dividing by the number of genomes in its species, and sorts them by fitness.
         /// Returns a vector of tuples containing the genome and its fitness score.
-        #[cfg(feature = "rayon")]
         pub fn calculate_and_sort(&self, genomes: Vec<G>) -> Vec<(G, f32)> {
-            let population =
-                SpeciatedPopulation::from_genomes(&genomes, self.speciation_threshold, &self.ctx);
-
-            let mut fitnesses = vec![0.0; genomes.len()];
-
-            for species in population.species() {
-                let len = species.len() as f32;
-                debug_assert!(len != 0.0);
-                for &index in species {
-                    let genome = &genomes[index];
-                    let fitness = self.inner.fitness_fn.fitness(genome);
-                    if fitness < 0.0 {
-                        fitnesses[index] = fitness * len;
-                    } else {
-                        fitnesses[index] = fitness / len;
-                    }
-                }
-            }
-
-            let mut result: Vec<(G, f32)> = genomes.into_iter().zip(fitnesses).collect();
-            result.sort_by(|(_a, afit), (_b, bfit)| bfit.partial_cmp(afit).unwrap());
+            let (_, divided) = self.calculate_fitnesses(&genomes);
+            let mut result: Vec<(G, f32)> = genomes.into_iter().zip(divided).collect();
+            result.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
             result
         }
     }
@@ -708,20 +730,44 @@ mod speciation {
     {
         #[cfg(not(feature = "rayon"))]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
-            let mut fitnesses = self.calculate_and_sort(genomes);
-            self.inner.observer.observe(&fitnesses);
-            let median_index = (fitnesses.len() as f32) * self.inner.threshold;
-            fitnesses.truncate(median_index as usize + 1);
-            fitnesses.into_iter().map(|(g, _)| g).collect()
+            let (raw, divided) = self.calculate_fitnesses(&genomes);
+
+            let mut sorted: Vec<(G, f32, f32)> = genomes
+                .into_iter()
+                .enumerate()
+                .map(|(i, g)| (g, raw[i], divided[i]))
+                .collect();
+            sorted.sort_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
+
+            let median_index = (sorted.len() as f32) * self.inner.threshold;
+
+            let mut observer_pairs: Vec<(G, f32)> =
+                sorted.into_iter().map(|(g, raw, _)| (g, raw)).collect();
+            self.inner.observer.observe(&observer_pairs);
+
+            observer_pairs.truncate(median_index as usize + 1);
+            observer_pairs.into_iter().map(|(g, _)| g).collect()
         }
 
         #[cfg(feature = "rayon")]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
-            let mut fitnesses = self.calculate_and_sort(genomes);
-            self.inner.observer.observe(&fitnesses);
-            let median_index = (fitnesses.len() as f32) * self.inner.threshold;
-            fitnesses.truncate(median_index as usize + 1);
-            fitnesses.into_par_iter().map(|(g, _)| g).collect()
+            let (raw, divided) = self.calculate_fitnesses(&genomes);
+
+            let mut sorted: Vec<(G, f32, f32)> = genomes
+                .into_iter()
+                .enumerate()
+                .map(|(i, g)| (g, raw[i], divided[i]))
+                .collect();
+            sorted.sort_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
+
+            let median_index = (sorted.len() as f32) * self.inner.threshold;
+
+            let mut observer_pairs: Vec<(G, f32)> =
+                sorted.into_iter().map(|(g, raw, _)| (g, raw)).collect();
+            self.inner.observer.observe(&observer_pairs);
+
+            observer_pairs.truncate(median_index as usize + 1);
+            observer_pairs.into_par_iter().map(|(g, _)| g).collect()
         }
     }
 }
