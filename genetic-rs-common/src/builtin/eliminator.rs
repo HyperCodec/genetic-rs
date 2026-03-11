@@ -35,6 +35,7 @@ impl<G: FeatureBoundedGenome, T: FitnessFn<G> + Send + Sync> FeatureBoundedFitne
 /// A trait for observing fitness scores. This can be used to implement things like logging or statistics collection.
 pub trait FitnessObserver<G> {
     /// Observes the fitness scores of a generation of genomes.
+    /// The input slice is always sorted in descending order by fitness (highest fitness first).
     fn observe(&mut self, fitnesses: &[(G, f32)]);
 
     /// Layers this observer with another, calling both in sequence.
@@ -732,42 +733,62 @@ mod speciation {
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
             let (raw, divided) = self.calculate_fitnesses(&genomes);
 
-            let mut sorted: Vec<(G, f32, f32)> = genomes
+            let mut data: Vec<(G, f32, f32)> = genomes
                 .into_iter()
                 .enumerate()
                 .map(|(i, g)| (g, raw[i], divided[i]))
                 .collect();
-            sorted.sort_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
 
-            let median_index = (sorted.len() as f32) * self.inner.threshold;
+            let median_index = (data.len() as f32) * self.inner.threshold;
 
-            let mut observer_pairs: Vec<(G, f32)> =
-                sorted.into_iter().map(|(g, raw, _)| (g, raw)).collect();
+            // Sort by raw fitness so observer inputs are ordered by fitness descending.
+            data.sort_by(|(_, a, _), (_, b, _)| b.partial_cmp(a).unwrap());
+
+            // Split raw-sorted pairs for the observer while retaining divided values.
+            let (observer_pairs, divided_vals): (Vec<(G, f32)>, Vec<f32>) = data
+                .into_iter()
+                .map(|(g, raw, div)| ((g, raw), div))
+                .unzip();
+
             self.inner.observer.observe(&observer_pairs);
 
-            observer_pairs.truncate(median_index as usize + 1);
-            observer_pairs.into_iter().map(|(g, _)| g).collect()
+            // Re-sort by divided fitness and truncate for speciation-aware elimination.
+            let mut with_divided: Vec<_> =
+                observer_pairs.into_iter().zip(divided_vals).collect();
+            with_divided.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+            with_divided.truncate(median_index as usize + 1);
+            with_divided.into_iter().map(|((g, _), _)| g).collect()
         }
 
         #[cfg(feature = "rayon")]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
             let (raw, divided) = self.calculate_fitnesses(&genomes);
 
-            let mut sorted: Vec<(G, f32, f32)> = genomes
+            let mut data: Vec<(G, f32, f32)> = genomes
                 .into_iter()
                 .enumerate()
                 .map(|(i, g)| (g, raw[i], divided[i]))
                 .collect();
-            sorted.sort_by(|(_, _, a), (_, _, b)| b.partial_cmp(a).unwrap());
 
-            let median_index = (sorted.len() as f32) * self.inner.threshold;
+            let median_index = (data.len() as f32) * self.inner.threshold;
 
-            let mut observer_pairs: Vec<(G, f32)> =
-                sorted.into_iter().map(|(g, raw, _)| (g, raw)).collect();
+            // Sort by raw fitness so observer inputs are ordered by fitness descending.
+            data.sort_by(|(_, a, _), (_, b, _)| b.partial_cmp(a).unwrap());
+
+            // Split raw-sorted pairs for the observer while retaining divided values.
+            let (observer_pairs, divided_vals): (Vec<(G, f32)>, Vec<f32>) = data
+                .into_iter()
+                .map(|(g, raw, div)| ((g, raw), div))
+                .unzip();
+
             self.inner.observer.observe(&observer_pairs);
 
-            observer_pairs.truncate(median_index as usize + 1);
-            observer_pairs.into_par_iter().map(|(g, _)| g).collect()
+            // Re-sort by divided fitness and truncate for speciation-aware elimination.
+            let mut with_divided: Vec<_> =
+                observer_pairs.into_iter().zip(divided_vals).collect();
+            with_divided.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+            with_divided.truncate(median_index as usize + 1);
+            with_divided.into_par_iter().map(|((g, _), _)| g).collect()
         }
     }
 }

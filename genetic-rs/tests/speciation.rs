@@ -266,6 +266,54 @@ fn speciation_protects_rare_species() {
     );
 }
 
+/// The fitness observer on [`SpeciatedFitnessEliminator`] must receive fitness scores
+/// sorted in descending order by raw (pre-division) fitness.
+///
+/// Setup:
+/// - 4 genomes of class 0 with val = 1.0  → raw fitness = 1.0, divided = 0.25
+/// - 1 genome  of class 1 with val = 0.5  → raw fitness = 0.5, divided = 0.5
+///
+/// If sorted by divided fitness, the class-1 genome (divided = 0.5) would come first.
+/// If sorted by raw fitness, the four class-0 genomes (raw = 1.0) come first.
+#[test]
+fn observer_receives_fitness_sorted_by_raw_descending() {
+    use std::sync::{Arc, Mutex};
+
+    let observed: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+    let observed_clone = Arc::clone(&observed);
+
+    let observer = move |fitnesses: &[(Genome, f32)]| {
+        let mut v = observed_clone.lock().unwrap();
+        v.extend(fitnesses.iter().map(|(_, f)| *f));
+    };
+
+    let mut genomes: Vec<Genome> = (0..4).map(|_| Genome { class: 0, val: 1.0 }).collect();
+    genomes.push(Genome { class: 1, val: 0.5 });
+
+    let mut eliminator = SpeciatedFitnessEliminator::new(fitness, 0.5, 0.5, observer, ());
+    eliminator.eliminate(genomes);
+
+    let scores = observed.lock().unwrap();
+    assert_eq!(scores.len(), 5, "observer must receive all genomes");
+
+    // Scores must be in non-increasing order (sorted descending by raw fitness).
+    for window in scores.windows(2) {
+        assert!(
+            window[0] >= window[1],
+            "observer inputs must be sorted descending by fitness, but got: {:?}",
+            *scores
+        );
+    }
+
+    // If sorted by divided fitness, the class-1 genome (divided = 0.5) would come first
+    // with score 0.5. Sorted by raw fitness, the highest score must be 1.0.
+    assert!(
+        (scores[0] - 1.0_f32).abs() < 1e-6,
+        "first fitness must be the highest raw fitness (1.0), but got: {:?}",
+        *scores
+    );
+}
+
 /// The fitness observer on [`SpeciatedFitnessEliminator`] must receive the raw
 /// (pre-division) fitness values, not the values after they have been divided by
 /// the number of genomes in the species.
