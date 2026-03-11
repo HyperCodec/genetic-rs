@@ -708,20 +708,90 @@ mod speciation {
     {
         #[cfg(not(feature = "rayon"))]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
-            let mut fitnesses = self.calculate_and_sort(genomes);
-            self.inner.observer.observe(&fitnesses);
-            let median_index = (fitnesses.len() as f32) * self.inner.threshold;
-            fitnesses.truncate(median_index as usize + 1);
-            fitnesses.into_iter().map(|(g, _)| g).collect()
+            let population = SpeciatedPopulation::from_genomes(
+                &genomes,
+                self.speciation_threshold,
+                &self.ctx,
+            );
+            let mut raw_fitnesses = vec![0.0_f32; genomes.len()];
+            let mut divided_fitnesses = vec![0.0_f32; genomes.len()];
+
+            for species in population.species() {
+                let len = species.len() as f32;
+                debug_assert!(len != 0.0);
+                for &index in species {
+                    let fitness = self.inner.fitness_fn.fitness(&genomes[index]);
+                    raw_fitnesses[index] = fitness;
+                    divided_fitnesses[index] = if fitness < 0.0 {
+                        fitness * len
+                    } else {
+                        fitness / len
+                    };
+                }
+            }
+
+            // Sort by divided fitness (highest first) for elimination, but expose raw
+            // fitness values to the observer so it sees the unmodified scores.
+            let mut pairs: Vec<(G, f32, f32)> = genomes
+                .into_iter()
+                .enumerate()
+                .map(|(i, g)| (g, raw_fitnesses[i], divided_fitnesses[i]))
+                .collect();
+            pairs.sort_by(|(_, _, adiv), (_, _, bdiv)| bdiv.partial_cmp(adiv).unwrap());
+
+            let median_index = (pairs.len() as f32) * self.inner.threshold;
+
+            // Build observer slice with raw fitness values (sorted by divided fitness).
+            let mut observer_pairs: Vec<(G, f32)> =
+                pairs.into_iter().map(|(g, raw, _)| (g, raw)).collect();
+            self.inner.observer.observe(&observer_pairs);
+
+            observer_pairs.truncate(median_index as usize + 1);
+            observer_pairs.into_iter().map(|(g, _)| g).collect()
         }
 
         #[cfg(feature = "rayon")]
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
-            let mut fitnesses = self.calculate_and_sort(genomes);
-            self.inner.observer.observe(&fitnesses);
-            let median_index = (fitnesses.len() as f32) * self.inner.threshold;
-            fitnesses.truncate(median_index as usize + 1);
-            fitnesses.into_par_iter().map(|(g, _)| g).collect()
+            let population = SpeciatedPopulation::from_genomes(
+                &genomes,
+                self.speciation_threshold,
+                &self.ctx,
+            );
+            let mut raw_fitnesses = vec![0.0_f32; genomes.len()];
+            let mut divided_fitnesses = vec![0.0_f32; genomes.len()];
+
+            for species in population.species() {
+                let len = species.len() as f32;
+                debug_assert!(len != 0.0);
+                for &index in species {
+                    let fitness = self.inner.fitness_fn.fitness(&genomes[index]);
+                    raw_fitnesses[index] = fitness;
+                    divided_fitnesses[index] = if fitness < 0.0 {
+                        fitness * len
+                    } else {
+                        fitness / len
+                    };
+                }
+            }
+
+            // Sort by divided fitness (highest first) for elimination, but expose raw
+            // fitness values to the observer so it sees the unmodified scores.
+            let mut pairs: Vec<(G, f32, f32)> = genomes
+                .into_iter()
+                .enumerate()
+                .map(|(i, g)| (g, raw_fitnesses[i], divided_fitnesses[i]))
+                .collect();
+            pairs.sort_by(|(_, _, adiv), (_, _, bdiv)| bdiv.partial_cmp(adiv).unwrap());
+
+            let median_index = (pairs.len() as f32) * self.inner.threshold;
+
+            // Build observer slice with raw fitness values (sorted by divided fitness).
+            let mut observer_pairs: Vec<(G, f32)> =
+                pairs.into_iter().map(|(g, raw, _)| (g, raw)).collect();
+            self.inner.observer.observe(&observer_pairs);
+
+            observer_pairs.truncate(median_index as usize + 1);
+            observer_pairs.into_par_iter().map(|(g, _)| g).collect()
         }
     }
 }

@@ -265,3 +265,52 @@ fn speciation_protects_rare_species() {
         "the rare species genome must survive despite lower raw fitness"
     );
 }
+
+/// The fitness observer on [`SpeciatedFitnessEliminator`] must receive the raw
+/// (pre-division) fitness values, not the values after they have been divided by
+/// the number of genomes in the species.
+///
+/// Setup:
+/// - 4 genomes of class 0 with val = 1.0  → raw fitness = 1.0, divided = 0.25
+/// - 1 genome  of class 1 with val = 0.5  → raw fitness = 0.5, divided = 0.5
+///
+/// If the observer sees raw values, it must observe 1.0 and 0.5 among the scores.
+/// If it sees divided values, it would observe 0.25 instead of 1.0 — the test
+/// would fail in that case.
+#[test]
+fn observer_receives_pre_division_fitness() {
+    use std::sync::{Arc, Mutex};
+
+    let observed: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::new()));
+    let observed_clone = Arc::clone(&observed);
+
+    let observer = move |fitnesses: &[(Genome, f32)]| {
+        let mut v = observed_clone.lock().unwrap();
+        v.extend(fitnesses.iter().map(|(_, f)| *f));
+    };
+
+    let mut class0_genomes: Vec<Genome> = (0..4).map(|_| Genome { class: 0, val: 1.0 }).collect();
+    class0_genomes.push(Genome { class: 1, val: 0.5 });
+
+    let mut eliminator = SpeciatedFitnessEliminator::new(fitness, 0.5, 0.5, observer, ());
+    eliminator.eliminate(class0_genomes);
+
+    let scores = observed.lock().unwrap();
+    // Raw fitness values are 1.0 (×4) and 0.5 (×1).
+    // Divided values would be 0.25 and 0.5 — we must NOT see 0.25.
+    assert!(
+        scores.iter().any(|&f| (f - 1.0_f32).abs() < 1e-6),
+        "observer must see the raw fitness 1.0, but got: {:?}",
+        *scores,
+    );
+    assert!(
+        scores.iter().any(|&f| (f - 0.5_f32).abs() < 1e-6),
+        "observer must see the raw fitness 0.5, but got: {:?}",
+        *scores,
+    );
+    assert!(
+        !scores.iter().any(|&f| (f - 0.25_f32).abs() < 1e-6),
+        "observer must NOT see the divided fitness 0.25 (pre-division values expected), but got: {:?}",
+        *scores,
+    );
+}
