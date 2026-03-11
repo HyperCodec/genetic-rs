@@ -682,7 +682,6 @@ mod speciation {
             let population =
                 SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
 
-            // Build a per-genome species-size lookup (sequential — clustering must be serial).
             let mut species_lens = vec![0.0_f32; genomes.len()];
             for species in population.species() {
                 let len = species.len() as f32;
@@ -692,7 +691,6 @@ mod speciation {
                 }
             }
 
-            // Evaluate fitness functions in parallel.
             let fitness_fn = &self.inner.fitness_fn;
             let results: Vec<(f32, f32)> = genomes
                 .par_iter()
@@ -734,8 +732,6 @@ mod speciation {
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
             let (raw, divided) = self.calculate_fitnesses(&genomes);
 
-            // Sort by divided fitness (highest first) for elimination, but expose raw
-            // fitness values to the observer so it sees the unmodified scores.
             let mut sorted: Vec<(G, f32, f32)> = genomes
                 .into_iter()
                 .enumerate()
@@ -745,7 +741,6 @@ mod speciation {
 
             let median_index = (sorted.len() as f32) * self.inner.threshold;
 
-            // Expose raw fitness values to the observer.
             let mut observer_pairs: Vec<(G, f32)> =
                 sorted.into_iter().map(|(g, raw, _)| (g, raw)).collect();
             self.inner.observer.observe(&observer_pairs);
@@ -758,8 +753,6 @@ mod speciation {
         fn eliminate(&mut self, genomes: Vec<G>) -> Vec<G> {
             let (raw, divided) = self.calculate_fitnesses(&genomes);
 
-            // Sort by divided fitness (highest first) for elimination, but expose raw
-            // fitness values to the observer so it sees the unmodified scores.
             let mut sorted: Vec<(G, f32, f32)> = genomes
                 .into_iter()
                 .enumerate()
@@ -769,7 +762,6 @@ mod speciation {
 
             let median_index = (sorted.len() as f32) * self.inner.threshold;
 
-            // Expose raw fitness values to the observer.
             let mut observer_pairs: Vec<(G, f32)> =
                 sorted.into_iter().map(|(g, raw, _)| (g, raw)).collect();
             self.inner.observer.observe(&observer_pairs);
