@@ -649,6 +649,7 @@ mod speciation {
         /// Returns `(raw_fitnesses, divided_fitnesses)` where both vecs are indexed
         /// the same way as `genomes`.  The divided value is used for elimination
         /// (to balance species pressure); the raw value is what observers see.
+        #[cfg(not(feature = "rayon"))]
         fn calculate_fitnesses(&self, genomes: &[G]) -> (Vec<f32>, Vec<f32>) {
             let population =
                 SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
@@ -668,6 +669,47 @@ mod speciation {
                     };
                 }
             }
+
+            (raw, divided)
+        }
+
+        /// Computes raw and species-divided fitness for every genome (parallel version).
+        ///
+        /// Species membership is determined sequentially first (greedy clustering), then
+        /// fitness functions are evaluated in parallel using rayon.
+        #[cfg(feature = "rayon")]
+        fn calculate_fitnesses(&self, genomes: &[G]) -> (Vec<f32>, Vec<f32>) {
+            let population =
+                SpeciatedPopulation::from_genomes(genomes, self.speciation_threshold, &self.ctx);
+
+            // Build a per-genome species-size lookup (sequential — clustering must be serial).
+            let mut species_lens = vec![0.0_f32; genomes.len()];
+            for species in population.species() {
+                let len = species.len() as f32;
+                debug_assert!(len != 0.0);
+                for &index in species {
+                    species_lens[index] = len;
+                }
+            }
+
+            // Evaluate fitness functions in parallel.
+            let fitness_fn = &self.inner.fitness_fn;
+            let results: Vec<(f32, f32)> = genomes
+                .par_iter()
+                .zip(species_lens.par_iter())
+                .map(|(genome, &len)| {
+                    let fitness = fitness_fn.fitness(genome);
+                    let divided = if fitness < 0.0 {
+                        fitness * len
+                    } else {
+                        fitness / len
+                    };
+                    (fitness, divided)
+                })
+                .collect();
+
+            let raw = results.iter().map(|&(r, _)| r).collect();
+            let divided = results.iter().map(|&(_, d)| d).collect();
 
             (raw, divided)
         }
