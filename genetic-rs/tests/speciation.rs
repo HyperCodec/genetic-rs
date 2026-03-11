@@ -269,12 +269,14 @@ fn speciation_protects_rare_species() {
 /// The fitness observer on [`SpeciatedFitnessEliminator`] must receive fitness scores
 /// sorted in descending order by raw (pre-division) fitness.
 ///
-/// Setup:
-/// - 4 genomes of class 0 with val = 1.0  → raw fitness = 1.0, divided = 0.25
+/// Setup (deliberately unsorted input — low fitness genome placed first):
 /// - 1 genome  of class 1 with val = 0.5  → raw fitness = 0.5, divided = 0.5
+/// - 4 genomes of class 0 with val = 1.0  → raw fitness = 1.0, divided = 0.25
 ///
-/// If sorted by divided fitness, the class-1 genome (divided = 0.5) would come first.
-/// If sorted by raw fitness, the four class-0 genomes (raw = 1.0) come first.
+/// If the eliminator forwards the input order unchanged, the observer would see
+/// `[0.5, 1.0, 1.0, 1.0, 1.0]` (not sorted). If sorted by divided fitness the
+/// class-1 genome (divided = 0.5) would come first, yielding `[0.5, 1.0, …]`.
+/// Only when sorted by raw fitness does the observer see `[1.0, 1.0, 1.0, 1.0, 0.5]`.
 #[test]
 fn observer_receives_fitness_sorted_by_raw_descending() {
     use std::sync::{Arc, Mutex};
@@ -287,8 +289,9 @@ fn observer_receives_fitness_sorted_by_raw_descending() {
         v.extend(fitnesses.iter().map(|(_, f)| *f));
     };
 
-    let mut genomes: Vec<Genome> = (0..4).map(|_| Genome { class: 0, val: 1.0 }).collect();
-    genomes.push(Genome { class: 1, val: 0.5 });
+    // Put the low-fitness genome first so the input is intentionally unsorted.
+    let mut genomes = vec![Genome { class: 1, val: 0.5 }];
+    genomes.extend((0..4).map(|_| Genome { class: 0, val: 1.0 }));
 
     let mut eliminator = SpeciatedFitnessEliminator::new(fitness, 0.5, 0.5, observer, ());
     eliminator.eliminate(genomes);
@@ -305,11 +308,15 @@ fn observer_receives_fitness_sorted_by_raw_descending() {
         );
     }
 
-    // If sorted by divided fitness, the class-1 genome (divided = 0.5) would come first
-    // with score 0.5. Sorted by raw fitness, the highest score must be 1.0.
+    // The full expected sequence is [1.0, 1.0, 1.0, 1.0, 0.5].
     assert!(
         (scores[0] - 1.0_f32).abs() < 1e-6,
         "first fitness must be the highest raw fitness (1.0), but got: {:?}",
+        *scores
+    );
+    assert!(
+        (scores[4] - 0.5_f32).abs() < 1e-6,
+        "last fitness must be the lowest raw fitness (0.5), but got: {:?}",
         *scores
     );
 }
